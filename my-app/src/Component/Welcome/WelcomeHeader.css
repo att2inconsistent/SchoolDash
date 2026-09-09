@@ -1,0 +1,51 @@
+.welcome-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.welcome-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.welcome-header-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.welcome-header-location-icon {
+  width: 14px;
+  height: 14px;
+}
+.welcome-header-location-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.welcome-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.welcome-header-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .welcome-header {
+    flex-direction: column;
+  }
+}

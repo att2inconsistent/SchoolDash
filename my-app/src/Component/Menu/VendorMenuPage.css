@@ -1,0 +1,91 @@
+.vendor-menu-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 20px;
+}
+.vendor-menu-back:hover {
+  color: #1f2937;
+}
+.vendor-menu-back-icon {
+  width: 16px;
+  height: 16px;
+}
+.vendor-menu-back-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.vendor-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.vendor-menu-header-image {
+  width: 88px;
+  height: 88px;
+  border-radius: 16px;
+  background: #f3f4f6;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.vendor-menu-header-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vendor-menu-name {
+  font-size: 21px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.vendor-menu-tags {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 0 8px 0;
+}
+
+.vendor-menu-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.vendor-menu-rating-icon {
+  width: 14px;
+  height: 14px;
+  color: #f59e0b;
+}
+.vendor-menu-rating-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.vendor-menu-list-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 8px 20px;
+  margin-bottom: 100px; /* ruang supaya tidak ketutupan floating cart bar */
+}
+
+.vendor-menu-list-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 16px 0;
+}

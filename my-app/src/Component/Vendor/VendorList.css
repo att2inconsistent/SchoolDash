@@ -1,0 +1,158 @@
+.vendor-list {
+  margin-bottom: 32px;
+}
+
+.vendor-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.vendor-list-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.vendor-list-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.vendor-list-filter:hover {
+  border-color: #d1d5db;
+}
+
+.vendor-list-filter-icon {
+  width: 15px;
+  height: 15px;
+}
+.vendor-list-filter-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.vendor-list-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .vendor-list-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .vendor-list-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Card --- */
+.vendor-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.vendor-card-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #f3f4f6;
+}
+.vendor-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vendor-card-rating {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f2937;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.vendor-card-rating-icon {
+  width: 12px;
+  height: 12px;
+  color: #f59e0b;
+}
+.vendor-card-rating-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.vendor-card-body {
+  padding: 14px 16px 16px;
+}
+
+.vendor-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.vendor-card-tags {
+  font-size: 12.5px;
+  color: #9ca3af;
+  margin: 0 0 14px 0;
+}
+
+.vendor-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vendor-card-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #6b7280;
+}
+.vendor-card-time-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.vendor-card-time-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.vendor-card-link {
+  border: none;
+  background: transparent;
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.vendor-card-link:hover {
+  text-decoration: underline;
+}

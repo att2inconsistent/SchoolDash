@@ -1,0 +1,56 @@
+.balance-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  min-width: 260px;
+}
+
+.balance-card-icon {
+  width: 20px;
+  height: 20px;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+.balance-card-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.balance-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.balance-card-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: 0.02em;
+}
+
+.balance-card-amount {
+  font-size: 19px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.balance-card-button {
+  border: none;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.balance-card-button:hover {
+  background: #111827;
+}
