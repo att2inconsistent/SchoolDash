@@ -1,5 +1,5 @@
 import React from "react";
-import "./Balancecard.css";
+import "./BalanceCard.css";
 
 const walletIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -9,10 +9,14 @@ const walletIcon = (
 );
 
 function formatRupiah(value) {
-  return "Rp" + Number(value || 0).toLocaleString("id-ID");
+  // Kalau belum login (balance null/undefined), tampilkan strip saja
+  if (value === null || value === undefined) return "-";
+  return "Rp" + Number(value).toLocaleString("id-ID");
 }
 
-export default function BalanceCard({ balance = 0, onTopUp }) {
+export default function BalanceCard({ balance, onTopUp }) {
+  const isLoggedIn = balance !== null && balance !== undefined;
+
   return (
     <div className="balance-card">
       <div className="balance-card-icon">{walletIcon}</div>
@@ -22,9 +26,11 @@ export default function BalanceCard({ balance = 0, onTopUp }) {
         <span className="balance-card-amount">{formatRupiah(balance)}</span>
       </div>
 
-      <button className="balance-card-button" onClick={onTopUp}>
-        Isi Saldo
-      </button>
+      {isLoggedIn && (
+        <button className="balance-card-button" onClick={onTopUp}>
+          Isi Saldo
+        </button>
+      )}
     </div>
   );
 }

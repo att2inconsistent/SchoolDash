@@ -162,4 +162,37 @@
 }
 .topbar-dropdown-item.danger {
   color: #dc2626;
+}/* --- Tambahan: tombol Masuk & Daftar (saat belum login) --- */
+.topbar-auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-login-btn {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.topbar-login-btn:hover {
+  background: #f9fafb;
+}
+
+.topbar-register-btn {
+  border: none;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.topbar-register-btn:hover {
+  background: #111827;
 }

@@ -21,7 +21,14 @@ const icons = {
   ),
 };
 
-export default function Topbar({ user, hasNotification = true, onSearch, onLogout }) {
+export default function Topbar({
+  user,
+  hasNotification = true,
+  onSearch,
+  onLogout,
+  onLoginClick,
+  onRegisterClick,
+}) {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -68,32 +75,43 @@ export default function Topbar({ user, hasNotification = true, onSearch, onLogou
           {hasNotification && <span className="topbar-bell-dot" />}
         </button>
 
-        <div className="topbar-profile" ref={menuRef}>
-          <button
-            className="topbar-profile-trigger"
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            <div className="topbar-profile-text">
-              <span className="topbar-profile-name">{user?.name}</span>
-              <span className="topbar-profile-role">{user?.role}</span>
-            </div>
-            <div className="topbar-avatar">{initials}</div>
-            <span className="topbar-chevron">{icons.chevron}</span>
-          </button>
+        {user ? (
+          <div className="topbar-profile" ref={menuRef}>
+            <button
+              className="topbar-profile-trigger"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <div className="topbar-profile-text">
+                <span className="topbar-profile-name">{user?.name}</span>
+                <span className="topbar-profile-role">{user?.kelas}</span>
+              </div>
+              <div className="topbar-avatar">{initials}</div>
+              <span className="topbar-chevron">{icons.chevron}</span>
+            </button>
 
-          {menuOpen && (
-            <div className="topbar-dropdown">
-              <button className="topbar-dropdown-item">Profil Saya</button>
-              <button className="topbar-dropdown-item">Pengaturan</button>
-              <button
-                className="topbar-dropdown-item danger"
-                onClick={onLogout}
-              >
-                Keluar
-              </button>
-            </div>
-          )}
-        </div>
+            {menuOpen && (
+              <div className="topbar-dropdown">
+                <button className="topbar-dropdown-item">Profil Saya</button>
+                <button className="topbar-dropdown-item">Pengaturan</button>
+                <button
+                  className="topbar-dropdown-item danger"
+                  onClick={onLogout}
+                >
+                  Keluar
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="topbar-auth-buttons">
+            <button className="topbar-login-btn" onClick={onLoginClick}>
+              Masuk
+            </button>
+            <button className="topbar-register-btn" onClick={onRegisterClick}>
+              Daftar
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
