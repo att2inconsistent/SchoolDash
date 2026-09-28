@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useCart } from "./context/CartContext";
+import { useWallet } from "./context/WalletContext";
 import Sidebar from "./Component/Navbar/Sidebar";
 import Topbar from "./Component/Topbar/Topbar";
 import LoginPage from "./Component/Auth/LoginPage";
@@ -11,6 +12,7 @@ import CategoryFilter from "./Component/Category/CategoryFilter";
 import VendorList from "./Component/Vendor/VendorList";
 import VendorMenuPage from "./Component/Menu/VendorMenuPage";
 import PesananSayaPage from "./Component/Pesanan/PesananSayaPage";
+import TopUpPage from "./Component/TopUp/TopUpPage";
 import FloatingCartBar from "./Component/Cart/FloatingCartBar";
 
 function App() {
@@ -29,21 +31,22 @@ function App() {
   // Contoh data menu per vendor, ganti di backend nanti (id sesuain sama vendor kalo bisa)
   const menuByVendor = {
     1: [
-      { id: "1-1", name: "Nasi Kulit Jeruk", description: "Nasi + kulit ayam + daun jeruk", price: 10000, image: null },
+      { id: "1-1", name: "Nasi Kulit Jeruk", description: "Nasi + kulit ayam + daun jeruk", price: 12000, image: null },
       { id: "1-2", name: "Nasi Goreng", description: "Nasi yang di goreng", price: 10000, image: null },
-      { id: "1-3", name: "Ayam Geprek", description: "Ayam crispy + sambal", price: 10000, image: null },
+      { id: "1-3", name: "Ayam Geprek", description: "Ayam crispy + sambal", price: 13000, image: null },
     ],
     2: [
       { id: "2-1", name: "Mie Ayam", description: "Mie + ayam cincang + pangsit goreng", price: 12000, image: null },
       { id: "2-2", name: "Mie Yamin", description: "Mie + ayam cincang + pangsit goreng + kecap", price: 12000, image: null },
     ],
     3: [
-      { id: "3-1", name: "Jus Alpukat", description: "Jus alpukat segar", price: 10000, image: null },
-      { id: "3-2", name: "Jus Jeruk", description: "Jus jeruk peras asli", price: 10000, image: null },
+      { id: "3-1", name: "Jus Alpukat", description: "Jus alpukat segar", price: 8000, image: null },
+      { id: "3-2", name: "Jus Jeruk", description: "Jus jeruk peras asli", price: 7000, image: null },
     ],
   };
 
   const { addItem } = useCart();
+  const { balance } = useWallet();
 
   function handleViewMenu(vendor) {
     setSelectedVendor(vendor);
@@ -83,7 +86,7 @@ function App() {
   return (
     <div>
       <Sidebar
-        activeKey={activePage === "menu" ? "beranda" : activePage}
+        activeKey={["menu", "topup"].includes(activePage) ? "beranda" : activePage}
         onNavigate={setActivePage}
       />
       <div style={{ marginLeft: "76px" }}>
@@ -100,8 +103,8 @@ function App() {
               <WelcomeHeader
                 schoolName="SMK Negeri 6 Jakarta"
                 userName={user?.name || "Tamu"}
-                balance={user ? 999999 : null}
-                onTopUp={() => console.log("isi saldo")}
+                balance={balance}
+                onTopUp={() => setActivePage("topup")}
               />
 
               <CategoryFilter
@@ -125,9 +128,13 @@ function App() {
           )}
 
           {activePage === "pesanan" && <PesananSayaPage />}
+
+          {activePage === "topup" && (
+            <TopUpPage onBack={() => setActivePage("beranda")} />
+          )}
         </main>
 
-        {activePage !== "pesanan" && (
+        {activePage !== "pesanan" && activePage !== "topup" && (
           <FloatingCartBar onViewCart={() => setActivePage("pesanan")} />
         )}
       </div>

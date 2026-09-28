@@ -4,13 +4,16 @@ import App from "./App.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 import "./index.css";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { WalletProvider } from "./context/WalletContext.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
-      <CartProvider>
-        <App />
-      </CartProvider>
+      <WalletProvider>
+        <CartProvider>
+          <App />
+        </CartProvider>
+      </WalletProvider>
     </AuthProvider>
   </React.StrictMode>
 );
