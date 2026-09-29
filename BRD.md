@@ -2,6 +2,7 @@
 
 ## Alur Pemesanan Makanan
 
+
 Pemesanan makanan di kantin sekolah masih dilakukan secara langsung. Siswa harus datang ke kantin, melihat makanan yang tersedia, kemudian mengantre untuk melakukan pemesanan dan pembayaran. Hal ini dapat menyebabkan antrean menjadi panjang, terutama pada jam istirahat, serta membuat siswa membutuhkan waktu lebih lama untuk mendapatkan makanan.
 
 ## Alur Pengelolaan Pesanan

@@ -1,5 +1,3 @@
-
-
 ## 1. Apa yang Akan Dibangun
 
 Akan dibuat sebuah aplikasi pemesanan makanan kantin yang digunakan untuk melihat menu, memilih makanan, melakukan pemesanan, dan melihat status pesanan.
