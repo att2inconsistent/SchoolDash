@@ -1,0 +1,203 @@
+.pesanan-page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+/* --- Banner pesanan berhasil --- */
+.pesanan-success {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.pesanan-success-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  padding: 8px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+}
+.pesanan-success-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pesanan-success-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 180px;
+  font-size: 13.5px;
+  color: #166534;
+}
+.pesanan-success-text strong {
+  font-size: 14.5px;
+  color: #14532d;
+}
+
+.pesanan-success-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pesanan-success-link {
+  border: none;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.pesanan-success-link:hover {
+  background: #15803d;
+}
+
+.pesanan-success-dismiss {
+  border: 1px solid #bbf7d0;
+  background: transparent;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.pesanan-success-dismiss:hover {
+  background: #dcfce7;
+}
+
+.pesanan-page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 24px 0;
+}
+
+.pesanan-page-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+/* --- Daftar item --- */
+.pesanan-list-card {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 8px 20px;
+}
+
+.pesanan-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 56px 24px;
+}
+
+.pesanan-empty-icon {
+  width: 48px;
+  height: 48px;
+  color: #d1d5db;
+}
+.pesanan-empty-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pesanan-empty-text {
+  font-size: 14px;
+  color: #9ca3af;
+  max-width: 280px;
+  margin: 0;
+}
+
+/* --- Ringkasan pesanan --- */
+.pesanan-summary-card {
+  width: 300px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  position: sticky;
+  top: 24px;
+}
+
+.pesanan-summary-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.pesanan-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.pesanan-summary-divider {
+  height: 1px;
+  background: #f0f0f1;
+  margin: 12px 0;
+}
+
+.pesanan-summary-total {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 18px;
+}
+
+.pesanan-checkout-btn {
+  width: 100%;
+  border: none;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.pesanan-checkout-btn:hover {
+  background: #111827;
+}
+
+@media (max-width: 720px) {
+  .pesanan-page-layout {
+    flex-direction: column;
+  }
+  .pesanan-summary-card {
+    width: 100%;
+    position: static;
+  }
+}
+
+@media (max-width: 767px) {
+  .pesanan-list-card {
+    padding: 6px 14px;
+  }
+  .pesanan-page-title {
+    font-size: 21px;
+  }
+}

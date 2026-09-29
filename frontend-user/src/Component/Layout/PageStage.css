@@ -1,0 +1,21 @@
+.page-stage {
+  position: relative;
+  width: 100%;
+}
+
+.page-stage-item {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+/* Halaman yang sedang keluar: keluar dari alur layout (tidak mengubah
+   tinggi halaman) dan tidak lagi menerima klik. */
+.page-stage-item--leaving {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+}
