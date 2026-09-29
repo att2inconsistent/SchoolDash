@@ -5,14 +5,16 @@ function formatRupiah(value) {
   return "Rp" + Number(value || 0).toLocaleString("id-ID");
 }
 
-export default function MenuItem({ item }) {
+export default function MenuItem({ item, vendor }) {
   const { items, addItem, increaseQty, decreaseQty } = useCart();
 
   const cartItem = items.find((it) => it.id === item.id);
   const qty = cartItem ? cartItem.qty : 0;
 
   function handleAdd() {
-    addItem(item);
+    // Simpan nama & id kantin bersama item supaya pesanan yang tercatat
+    // bisa menampilkan asal vendor (lihat OrderContext.createOrder).
+    addItem({ ...item, vendor: vendor?.name || "-", vendorId: vendor?.id ?? null });
   }
 
   return (

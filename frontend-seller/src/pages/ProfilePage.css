@@ -1,0 +1,113 @@
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --- Kartu toko --- */
+.profile-store-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profile-store-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  background: #4338ca;
+  color: #ffffff;
+  font-size: 21px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-store-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.profile-store-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.profile-store-tags {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 0 8px 0;
+}
+
+.profile-store-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: #6b7280;
+  flex-wrap: wrap;
+}
+
+.profile-store-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  color: #1f2937;
+}
+.profile-store-star {
+  width: 13px;
+  height: 13px;
+  color: #f59e0b;
+}
+.profile-store-star svg {
+  width: 100%;
+  height: 100%;
+}
+
+.profile-store-form {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #f3f4f6;
+}
+.profile-store-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.profile-store .alert-success {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+/* --- Statistik --- */
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .profile-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Ganti password --- */
+.profile-password-form .btn {
+  min-width: 190px;
+}
+
+@media (max-width: 767px) {
+  .profile-store-head .btn {
+    width: 100%;
+  }
+  .profile-password-form .btn {
+    width: 100%;
+  }
+}

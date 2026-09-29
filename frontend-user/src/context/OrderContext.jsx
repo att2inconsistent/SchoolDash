@@ -59,6 +59,7 @@ export function OrderProvider({ children }) {
         id: it.id,
         name: it.name,
         vendor: it.vendor || "-",
+        vendorId: it.vendorId ?? null,
         price: it.price,
         qty: it.qty,
       })),

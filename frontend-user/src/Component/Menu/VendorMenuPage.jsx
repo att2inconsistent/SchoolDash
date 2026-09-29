@@ -39,7 +39,7 @@ export default function VendorMenuPage({ vendor, menuItems, onBack }) {
       <section className="vendor-menu-list-card">
         <h2 className="vendor-menu-list-title">Menu Makanan</h2>
         {menuItems.map((item) => (
-          <MenuItem key={item.id} item={item} />
+          <MenuItem key={item.id} item={item} vendor={vendor} />
         ))}
       </section>
     </div>

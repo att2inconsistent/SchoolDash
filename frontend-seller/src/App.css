@@ -1,0 +1,86 @@
+/* =========================================================================
+   Shell aplikasi (sidebar + topbar + konten)
+
+   Catatan performa:
+   - Sidebar/topbar tidak pernah di-unmount, jadi state (mis. pencarian)
+     tetap hidup dan tidak ada animasi mount berulang.
+   - Perpindahan halaman hanya memutar animasi opacity/transform
+     (lihat PageStage.jsx) supaya tidak memicu layout/reflow.
+   ========================================================================= */
+
+.app {
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.app-body {
+  margin-left: 76px; /* lebar sidebar */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  /* ruang bawah supaya konten tidak tertutup floating cart bar */
+  padding: 28px 28px 104px;
+}
+
+/* --- Mode halaman auth (login / register / otp): tampil full-screen --- */
+.app--auth {
+  background: #f9fafb;
+}
+
+.app--auth .app-body {
+  margin-left: 0;
+}
+
+.app--auth .app-main {
+  max-width: none;
+  padding: 0;
+}
+
+/* Sidebar fixed → aman dipadamkan tanpa mempengaruhi layout */
+.app--auth .sidebar {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Topbar ikut alur layout, jadi harus benar-benar hilang */
+.app--auth .topbar {
+  display: none;
+}
+
+/* Topbar menempel di atas saat halaman di-scroll */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/* ============================== RESPONSIVE ============================== */
+
+@media (max-width: 767px) {
+  /* Sidebar digantikan BottomNav (lihat BottomNav.css) */
+  .sidebar {
+    display: none;
+  }
+
+  .app-body {
+    margin-left: 0;
+  }
+
+  .app-main {
+    padding: 18px 16px 150px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .app-main {
+    padding: 24px 20px 104px;
+  }
+}

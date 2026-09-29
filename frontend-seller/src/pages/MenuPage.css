@@ -1,0 +1,239 @@
+.menu-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.menu-page-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-page-filter {
+  margin-bottom: 4px;
+}
+
+/* --- Daftar menu --- */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.menu-row-thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.menu-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.menu-row-thumb-icon {
+  width: 26px;
+  height: 26px;
+  color: #9ca3af;
+}
+.menu-row-thumb-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.menu-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-row-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.menu-row-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.menu-row-desc {
+  font-size: 12.5px;
+  color: #9ca3af;
+  margin: 5px 0 8px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.menu-row-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-row-price {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.menu-row-status {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.menu-row-status.on {
+  background: #ecfdf5;
+  color: #047857;
+}
+.menu-row-status.off {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.menu-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* --- Form modal --- */
+.menu-form-file {
+  border: 1px dashed #d1d5db;
+  background: #f9fafb;
+  padding: 14px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: #6b7280;
+}
+.menu-form-file::file-selector-button {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 7px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+.menu-form-file::file-selector-button:hover {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+}
+.menu-form-file:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.menu-form-file-error {
+  font-size: 12.5px;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+.menu-form-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.menu-form-preview img {
+  width: 96px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+}
+.menu-form-remove {
+  border: 1px solid #fecaca;
+  background: #ffffff;
+  color: #dc2626;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.menu-form-remove:hover:not(:disabled) {
+  background: #fef2f2;
+}
+.menu-form-remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.menu-form-active {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  color: #374151;
+  margin-bottom: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+.menu-form-active input {
+  width: 16px;
+  height: 16px;
+  accent-color: #4338ca;
+}
+
+.menu-delete-text {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0 0 20px 0;
+}
+.menu-delete-text strong {
+  color: #1f2937;
+}
+
+/* ============================== RESPONSIVE ============================== */
+@media (max-width: 767px) {
+  .menu-page .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .menu-page .section-header .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .menu-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .menu-row-info {
+    flex-basis: calc(100% - 80px);
+  }
+  .menu-row-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .menu-row-actions .btn {
+    flex: 1;
+  }
+}

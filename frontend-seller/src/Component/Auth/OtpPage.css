@@ -1,0 +1,61 @@
+.otp-input-group {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.otp-input-box {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  max-width: 52px;
+  height: 52px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+}
+.otp-input-box:focus {
+  border-color: #1f2937;
+}
+
+@media (max-width: 400px) {
+  .otp-input-group {
+    gap: 6px;
+  }
+  .otp-input-box {
+    height: 46px;
+    font-size: 17px;
+  }
+}
+
+.otp-resend-msg {
+  background: #f0fdf4;
+  color: #16a34a;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+/* Mode demo: kode OTP ditampilkan langsung di layar (tanpa email asli).
+   TODO(backend): hapus elemen ini setelah OTP dikirim lewat API. */
+.otp-dev-note {
+  background: #fffbeb;
+  border: 1px dashed #fcd34d;
+  color: #92400e;
+  font-size: 13px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.otp-dev-note strong {
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: #78350f;
+}
