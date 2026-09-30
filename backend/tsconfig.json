@@ -1,0 +1,42 @@
+{
+  // Dipakai oleh VS Code dan `npm run typecheck`.
+  //
+  // Sengaja mencakup scripts/ dan drizzle.config.ts juga — kalau tidak,
+  // VS Code memasukkan file-file itu ke "inferred project" yang tidak punya
+  // `types: ["node"]`, sehingga muncul error "Cannot find name 'process'".
+  // Efek samping bagus: file konfigurasi & tools ikut typecheck.
+  //
+  // Emit TIDAK dilakukan di sini (noEmit). Build pakai tsconfig.build.json.
+  "compilerOptions": {
+    /* ── Target & module ─────────────────────────────────────────
+       "type": "module" di package.json + module "nodenext" berarti
+       SEMUA import relatif WAJIB pakai ekstensi .js, contoh:
+           import { app } from "./app.js";                          */
+    "target": "esnext",
+    "module": "nodenext",
+
+    /* ── Environment (backend saja, tanpa DOM) ──────────────────── */
+    "lib": ["esnext"],
+    "types": ["node"],
+
+    /* ── Typecheck only ─────────────────────────────────────────── */
+    "noEmit": true,
+
+    /* ── Strictness ─────────────────────────────────────────────── */
+    "strict": true,
+    "noUncheckedIndexedAccess": true, // baris dari DB bisa undefined
+
+    // Dimatikan: bentrok dengan pola optional-field milik zod & drizzle
+    // (error "Type 'undefined' is not assignable to type 'T'").
+    "exactOptionalPropertyTypes": false,
+
+    /* ── Module hygiene ─────────────────────────────────────────── */
+    "verbatimModuleSyntax": true, // wajib `import type` utk type-only
+    "isolatedModules": true, // kompatibel tsx
+    "moduleDetection": "force",
+    "noUncheckedSideEffectImports": true,
+    "skipLibCheck": true
+  },
+
+  "include": ["src", "scripts", "drizzle.config.ts"]
+}

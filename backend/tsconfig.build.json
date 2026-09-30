@@ -1,0 +1,18 @@
+{
+  // Dipakai oleh `npm run build` -> menghasilkan dist/index.js
+  //
+  // Terpisah dari tsconfig.json karena tsconfig.json juga harus mencakup
+  // scripts/ dan drizzle.config.ts (untuk VS Code), padahal file di luar
+  // src/ tidak boleh ikut di-emit — itu akan melanggar rootDir dan
+  // merusak struktur dist/.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "sourceMap": true, // stack trace Node -> file .ts asli
+    "declaration": false, // backend tidak perlu .d.ts
+    "declarationMap": false
+  },
+  "include": ["src"]
+}

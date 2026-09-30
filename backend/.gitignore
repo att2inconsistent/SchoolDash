@@ -1,0 +1,9 @@
+# Root .gitignore sudah menutup node_modules, dist, dan .env.
+# File ini melengkapi khusus artefak runtime backend.
+
+# Folder upload dibuat oleh multer — isinya jangan di-commit.
+uploads/*
+!uploads/.gitkeep
+
+# Artefak Drizzle Kit yang tidak perlu masuk repo
+drizzle/meta/
