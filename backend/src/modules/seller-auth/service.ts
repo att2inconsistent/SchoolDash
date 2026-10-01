@@ -31,6 +31,29 @@ function toPublicUser(row: typeof sellers.$inferSelect) {
   return { id: row.id, name: row.name, email: row.email, storeName: row.storeName };
 }
 
+/**
+ * Kantin milik seller ini. Dipakai router seller (orders, wallet, menus)
+  * supaya semua data yang diambil seller otomatis ter-scope ke kantin dirinya
+  * sendiri — bukan kantin yang seller pilih dari parameter request.
+ */
+export async function getVendorForSeller(sellerId: number) {
+  const [row] = await db
+    .select({
+      id: vendors.id,
+      name: vendors.name,
+      sellerId: vendors.sellerId,
+    })
+    .from(vendors)
+    .where(eq(vendors.sellerId, sellerId))
+    .limit(1);
+
+  if (!row) {
+    throw { status: 404, message: 'Kantin tidak ditemukan.' } satisfies AppError;
+  }
+
+  return row;
+}
+
 export async function register(input: RegisterInput) {
   const exists = await db.query.sellers.findFirst({
     where: eq(sellers.email, input.email),

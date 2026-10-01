@@ -7,6 +7,10 @@ import { pool } from './config/db.js';
 import { authRouter } from './modules/auth/router.js';
 import { sellerAuthRouter } from './modules/seller-auth/router.js';
 import { catalogRouter } from './modules/catalog/router.js';
+import { sellerStoreRouter } from './modules/seller-store/router.js';
+import { sellerMenusRouter } from './modules/seller-menus/router.js';
+import { ordersRouter, sellerOrdersRouter } from './modules/orders/router.js';
+import { sellerWalletRouter, walletRouter } from './modules/wallet/router.js';
 
 export const app = express();
 
@@ -26,6 +30,12 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/seller/auth', sellerAuthRouter);
 app.use('/api/catalog', catalogRouter);
+app.use('/api/seller/store', sellerStoreRouter);
+app.use('/api/seller/menus', sellerMenusRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/seller/orders', sellerOrdersRouter);
+app.use('/api/wallet', walletRouter);
+app.use('/api/seller/wallet', sellerWalletRouter);
 
 // Health check harus didaftarkan DI ATAS catch-all 404 di bawah, kalau tidak
 // route ini tidak akan pernah tercapai.
