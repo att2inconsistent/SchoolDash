@@ -11,6 +11,7 @@ import { sellerStoreRouter } from './modules/seller-store/router.js';
 import { sellerMenusRouter } from './modules/seller-menus/router.js';
 import { ordersRouter, sellerOrdersRouter } from './modules/orders/router.js';
 import { sellerWalletRouter, walletRouter } from './modules/wallet/router.js';
+import { uploadRouter, uploadStaticRouter } from './modules/upload/router.js';
 
 export const app = express();
 
@@ -36,6 +37,10 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/seller/orders', sellerOrdersRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/seller/wallet', sellerWalletRouter);
+app.use('/api/seller/upload', uploadRouter);
+// File statis TIDAK butuh auth — URL-nya sudah berupa hash yang tidak bisa
+// ditebak dan img src tidak bisa mengirim header Authorization.
+app.use('/api/uploads', uploadStaticRouter);
 
 // Health check harus didaftarkan DI ATAS catch-all 404 di bawah, kalau tidak
 // route ini tidak akan pernah tercapai.
