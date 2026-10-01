@@ -18,8 +18,6 @@ function formatRupiah(value) {
   return "Rp" + Number(value || 0).toLocaleString("id-ID");
 }
 
-const BIAYA_LAYANAN = 1000;
-
 const checkIcon = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <path d="M5 13l4 4L19 7" />
@@ -41,7 +39,9 @@ export default function PesananSayaPage() {
   const navigate = useNavigate();
   const [placedOrder, setPlacedOrder] = useState(null);
 
-  const total = items.length > 0 ? subtotal + BIAYA_LAYANAN : 0;
+  // Tanpa biaya layanan, total = subtotal (backend orders/service.ts juga
+  // menyimpan total = subtotal, jadi angka di sini sama dengan yang disimpan).
+  const total = subtotal;
 
   function handleCheckout() {
     if (items.length === 0) return;
@@ -125,15 +125,6 @@ export default function PesananSayaPage() {
         {items.length > 0 && (
           <aside className="pesanan-summary-card">
             <h2 className="pesanan-summary-title">Ringkasan Pesanan</h2>
-
-            <div className="pesanan-summary-row">
-              <span>Subtotal</span>
-              <span>{formatRupiah(subtotal)}</span>
-            </div>
-            <div className="pesanan-summary-row">
-              <span>Biaya Layanan</span>
-              <span>{formatRupiah(BIAYA_LAYANAN)}</span>
-            </div>
 
             <div className="pesanan-summary-divider" />
 
