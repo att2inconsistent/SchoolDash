@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import { pool } from './config/db.js';
 import { authRouter } from './modules/auth/router.js';
 import { sellerAuthRouter } from './modules/seller-auth/router.js';
+import { catalogRouter } from './modules/catalog/router.js';
 
 export const app = express();
 
@@ -24,6 +25,7 @@ app.use(express.json());
 // auth → catalog → orders → wallet → seller menus → upload
 app.use('/api/auth', authRouter);
 app.use('/api/seller/auth', sellerAuthRouter);
+app.use('/api/catalog', catalogRouter);
 
 // Health check harus didaftarkan DI ATAS catch-all 404 di bawah, kalau tidak
 // route ini tidak akan pernah tercapai.
