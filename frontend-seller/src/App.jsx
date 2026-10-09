@@ -16,7 +16,6 @@ import BottomNav from "./Component/Navbar/BottomNav";
 import Topbar from "./Component/Topbar/Topbar";
 import LoginPage from "./Component/Auth/LoginPage";
 import RegisterPage from "./Component/Auth/RegisterPage";
-import OtpPage from "./Component/Auth/OtpPage";
 import PageStage from "./Component/Layout/PageStage";
 import DashboardPage from "./pages/DashboardPage";
 import MenuPage from "./pages/MenuPage";
@@ -26,7 +25,7 @@ import ProfilePage from "./pages/ProfilePage";
 import { playIntro } from "./animation/intro";
 import "./App.css";
 
-const AUTH_PATHS = ["/login", "/register", "/otp"];
+const AUTH_PATHS = ["/login", "/register"];
 
 /** Halaman auth tidak boleh dibuka kalau sudah login. */
 function GuestOnly({ children }) {
@@ -58,22 +57,6 @@ function ProtectedLayout({ message }) {
     <RequireAuth message={message}>
       <Outlet />
     </RequireAuth>
-  );
-}
-
-/** Halaman OTP — kalau tidak ada proses registrasi, kembali ke form daftar. */
-function OtpRoute() {
-  const navigate = useNavigate();
-  const { pendingRegistration } = useAuth();
-
-  if (!pendingRegistration) return <Navigate to="/register" replace />;
-
-  return (
-    <OtpPage
-      email={pendingRegistration.email}
-      onVerifySuccess={() => navigate("/", { replace: true })}
-      onBack={() => navigate("/register")}
-    />
   );
 }
 
@@ -154,13 +137,11 @@ function Shell() {
                   <GuestOnly>
                     <RegisterPage
                       onNavigateLogin={() => navigate("/login")}
-                      onRegisterSuccess={() => navigate("/otp")}
+                      onLoginSuccess={() => navigate("/", { replace: true })}
                     />
                   </GuestOnly>
                 }
               />
-
-              <Route path="/otp" element={<OtpRoute />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

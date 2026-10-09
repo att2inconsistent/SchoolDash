@@ -1,4 +1,4 @@
-import { CATEGORIES } from "../../data/menuData";
+import { useCatalog } from "../../context/CatalogContext";
 import "./CategoryFilter.css";
 
 // Ikon per kategori — daftar label/key-nya diambil dari CATEGORIES (menuData)
@@ -40,12 +40,14 @@ const icons = {
  * kategori tetap tersimpan saat refresh dan bisa dibagikan.
  */
 export default function CategoryFilter({ active = "semua", onChange }) {
+  const { categories } = useCatalog();
+
   return (
     <section className="category-filter">
       <h2 className="category-filter-title">Kategori Makanan</h2>
 
       <div className="category-filter-list">
-        {CATEGORIES.map((cat) => (
+        {[{ key: "semua", label: "Semua" }, ...categories].map((cat) => (
           <button
             key={cat.key}
             className={

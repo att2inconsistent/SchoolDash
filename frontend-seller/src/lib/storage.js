@@ -51,17 +51,15 @@ export function ensureSeed(key, seedValue) {
 }
 
 export const STORAGE_KEYS = {
-  // Akun seller (terpisah dari akun pembeli di frontend-user)
-  users: "schooldesk.seller.auth.users",
+  // Session login: { token, user }. Satu-satunya kredensial yang disimpan
+  // di klien — password tidak pernah masuk localStorage.
   session: "schooldesk.seller.auth.session",
-  pending: "schooldesk.seller.auth.pendingRegistration",
-  otp: "schooldesk.seller.auth.otpStore",
 
-  // Data toko & menu — khusus seller, bentuknya disamakan dengan menuData.js
+  // Sisa key di bawah ini masih dipakai contextseller yang belum ditulis ulang
+  // (MenuContext/OrderContext/WalletContext). Hapus bersama ensureSeed saat
+  // context-nya migrated ke API — DB adalah sumber kebenaran sekarang.
   vendors: "schooldesk.seller.vendors",
   menus: "schooldesk.seller.menus",
-
-  // Pesanan masuk, saldo, pendapatan & penarikan
   orders: "schooldesk.seller.orders",
   balances: "schooldesk.seller.balances",
   earnings: "schooldesk.seller.earnings",

@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import AuthLayout from "./AuthLayout";
 import "./AuthLayout.css";
 
-export default function RegisterPage({ onNavigateLogin, onRegisterSuccess }) {
+export default function RegisterPage({ onNavigateLogin, onLoginSuccess }) {
   const { register } = useAuth();
   const [form, setForm] = useState({
     name: "",
@@ -24,8 +24,8 @@ export default function RegisterPage({ onNavigateLogin, onRegisterSuccess }) {
     setLoading(true);
     try {
       await register(form);
-      // Setelah berhasil daftar, arahkan ke halaman verifikasi OTP
-      onRegisterSuccess && onRegisterSuccess(form.email);
+      // OTP dilewati: server sudah membalas token, jadi langsung masuk.
+      onLoginSuccess && onLoginSuccess();
     } catch (err) {
       setError(err.message);
     } finally {

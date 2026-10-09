@@ -1,236 +1,130 @@
 /* eslint-disable react-refresh/only-export-components -- context: provider + hook memang diekspor bersama */
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { readJSON, writeJSON, removeKey, STORAGE_KEYS } from "../lib/storage";
-import { SEED_SELLERS } from "../data/seed";
+import { api } from "../lib/api";
 
 const AuthContext = createContext(null);
 
 /**
- * ==========================================================================
- *  PLACEHOLDER AUTH PENJUAL — belum tersambung ke backend/database asli.
- *  Semua fungsi di bawah pakai data sementara (localStorage) dan setTimeout
- *  untuk mensimulasikan delay network.
+ * Auth penjual — tersambung ke backend.
  *
- *  TODO(backend) — tim backend tinggal mengganti ISI fungsi ini:
- *    register()     -> POST /api/seller/auth/register (buat akun + kantin)
- *    verifyOtp()    -> POST /api/seller/auth/verify-otp
- *    login()        -> POST /api/seller/auth/login
- *    resendOtp()    -> POST /api/seller/auth/resend-otp
- *    changePassword -> POST /api/seller/auth/change-password
- *  Halaman LoginPage/RegisterPage/OtpPage tidak perlu diubah karena hanya
- *  memanggil fungsi dari context ini.
+ * Perubahan dari versi placeholder:
+ *   - login/register/changePassword memanggil API beneran, bukan localStorage.
+ *   - SEED_SELLERS tidak lagi dipakai: akun + kantin (vendors) + dompet
+ *     dibuat server dalam satu transaksi saat register, jadi tidak ada data
+ *     contoh yang perlu ditulis ke localStorage.
+ *   - OTP dilewati (keputusan §2 #4): POST /seller/auth/register langsung
+ *     membalas { token, user }.
+ *   - verifyOtp/resendOtp/pendingRegistration/currentOtp dihapus — tidak ada
+ *     endpoint-nya di server.
  *
- *  PENTING: password disimpan plaintext HANYA untuk demo lokal.
- *  Di backend asli password wajib di-hash (bcrypt/argon2) di server.
- * ==========================================================================
+ * Password hanya dikirim ke POST /seller/auth/login atau
+ * /seller/auth/change-password, lalu di-hash server (bcrypt).
  */
 
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-/** Sembunyikan password sebelum object user dipakai di UI. */
-function toSafeUser(u) {
-  if (!u) return null;
-  const copy = { ...u };
-  delete copy.password;
-  return copy;
+/** Bentuk session yang disimpan: { token, user }. */
+function loadSession() {
+  const raw = readJSON(STORAGE_KEYS.session, null);
+  // Versi lama menyimpan email sebagai string — abaikan, tidak ada tokennya.
+  if (!raw || typeof raw !== "object" || !raw.token) return null;
+  return raw;
 }
 
 export function AuthProvider({ children }) {
-  // "Database" seller — diisi data contoh saat pertama kali dibuka.
-  const [users, setUsers] = useState(() => {
-    // ensureSeed: hanya menulis kalau key belum pernah ada
-    if (window.localStorage.getItem(STORAGE_KEYS.users) === null) {
-      writeJSON(STORAGE_KEYS.users, SEED_SELLERS);
-    }
-    return readJSON(STORAGE_KEYS.users, []);
-  });
-  const [sessionEmail, setSessionEmail] = useState(() =>
-    readJSON(STORAGE_KEYS.session, null)
-  );
-  const [pendingRegistration, setPendingRegistration] = useState(() =>
-    readJSON(STORAGE_KEYS.pending, null)
-  );
-  const [otpStore, setOtpStore] = useState(() => readJSON(STORAGE_KEYS.otp, {}));
+  // Diinisialisasi sinkron dari localStorage supaya RequireAuth tidak sempat
+  // memantulkan user ke /login saat refresh.
+  const [session, setSession] = useState(loadSession);
+  const user = session?.user ?? null;
 
-  // User yang diekspos ke UI — password tidak pernah dikirim ke component.
-  const user = useMemo(
-    () => toSafeUser(users.find((u) => u.email === sessionEmail)),
-    [users, sessionEmail]
-  );
-
-  // Kode OTP aktif — HANYA untuk demo supaya bisa ditampilkan di layar
-  // (email asli dikirim lewat backend, jadi tidak perlu lagi di sini).
-  const currentOtp = pendingRegistration
-    ? otpStore[pendingRegistration.email] || null
-    : null;
-
-  function saveUsers(next) {
-    setUsers(next);
-    writeJSON(STORAGE_KEYS.users, next);
-  }
-
-  function startSession(email) {
-    setSessionEmail(email);
-    writeJSON(STORAGE_KEYS.session, email);
-  }
-
-  function savePending(next) {
-    setPendingRegistration(next);
-    if (next) writeJSON(STORAGE_KEYS.pending, next);
-    else removeKey(STORAGE_KEYS.pending);
-  }
-
-  function saveOtp(next) {
-    setOtpStore(next);
-    writeJSON(STORAGE_KEYS.otp, next);
-  }
-
-  function login({ email, password }) {
-    // TODO(backend): ganti dengan POST /api/seller/auth/login
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const found = users.find(
-          (u) => u.email === email && u.password === password
-        );
-        if (!found) {
-          reject(new Error("Email atau password salah."));
-          return;
-        }
-        startSession(found.email);
-        resolve(toSafeUser(found));
-      }, 500);
-    });
-  }
-
-  function register({ name, storeName, email, password }) {
-    // TODO(backend): ganti dengan POST /api/seller/auth/register —
-    // kantin baru (vendor) dibuat oleh backend bersama akun seller ini.
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const exists = users.some((u) => u.email === email);
-        if (exists) {
-          reject(new Error("Email sudah terdaftar."));
-          return;
-        }
-        if (!storeName || storeName.trim().length < 3) {
-          reject(new Error("Nama kantin minimal 3 karakter."));
-          return;
-        }
-
-        const otp = generateOtp();
-        saveOtp({ ...otpStore, [email]: otp });
-        savePending({ name, storeName: storeName.trim(), email, password });
-
-        resolve({ email });
-      }, 500);
-    });
-  }
-
-  function verifyOtp(code) {
-    // TODO(backend): ganti dengan POST /api/seller/auth/verify-otp
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!pendingRegistration) {
-          reject(new Error("Tidak ada proses registrasi yang berjalan."));
-          return;
-        }
-        const validOtp = otpStore[pendingRegistration.email];
-        if (code !== validOtp) {
-          reject(new Error("Kode OTP salah."));
-          return;
-        }
-
-        const newUser = { ...pendingRegistration, createdAt: new Date().toISOString() };
-        saveUsers([...users, newUser]);
-        saveOtp(
-          Object.fromEntries(
-            Object.entries(otpStore).filter(
-              ([key]) => key !== pendingRegistration.email
-            )
-          )
-        );
-        startSession(newUser.email);
-        savePending(null);
-
-        resolve(toSafeUser(newUser));
-      }, 500);
-    });
-  }
-
-  function resendOtp() {
-    // TODO(backend): ganti dengan POST /api/seller/auth/resend-otp
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!pendingRegistration) {
-          reject(new Error("Tidak ada proses registrasi yang berjalan."));
-          return;
-        }
-        const otp = generateOtp();
-        saveOtp({ ...otpStore, [pendingRegistration.email]: otp });
-        resolve();
-      }, 400);
-    });
-  }
-
-  /**
-   * Ganti password seller yang sedang login.
-   * TODO(backend): ganti dengan POST /api/seller/auth/change-password
-   */
-  function changePassword(currentPassword, newPassword) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!user) {
-          reject(new Error("Silakan login terlebih dahulu."));
-          return;
-        }
-        const index = users.findIndex((u) => u.email === user.email);
-        if (index === -1 || users[index].password !== currentPassword) {
-          reject(new Error("Password saat ini tidak sesuai."));
-          return;
-        }
-        if (newPassword.length < 8) {
-          reject(new Error("Password baru minimal 8 karakter."));
-          return;
-        }
-        if (currentPassword === newPassword) {
-          reject(
-            new Error("Password baru tidak boleh sama dengan password lama.")
-          );
-          return;
-        }
-
-        saveUsers(
-          users.map((u, i) => (i === index ? { ...u, password: newPassword } : u))
-        );
-        resolve();
-      }, 500);
-    });
+  function startSession({ token, user: nextUser }) {
+    const next = { token, user: nextUser };
+    setSession(next);
+    writeJSON(STORAGE_KEYS.session, next);
+    return next.user;
   }
 
   function logout() {
-    setSessionEmail(null);
+    setSession(null);
     removeKey(STORAGE_KEYS.session);
   }
 
-  const value = {
-    user,
-    pendingRegistration,
-    currentOtp,
-    login,
-    register,
-    verifyOtp,
-    resendOtp,
-    changePassword,
-    logout,
-  };
+  /**
+   * Cek token yang tersimpan masih valid. Dipanggil sekali saat app dimuat:
+   * kalau token kedaluwarsa atau dicabut, hapus sekalian supaya user tidak
+   * melihat UI "sudah masuk" lalu gagal di request berikutnya.
+   */
+  useEffect(() => {
+    if (!session?.token) return;
+
+    let alive = true;
+    api("/seller/auth/me")
+      .then(({ user: fresh }) => {
+        if (!alive || !fresh) return;
+        setSession((prev) => {
+          if (!prev?.token) return prev;
+          const next = { token: prev.token, user: fresh };
+          writeJSON(STORAGE_KEYS.session, next);
+          return next;
+        });
+      })
+      .catch(() => {
+        // Token ditolak atau server mati — sesi dihapus supaya tidak
+        // bertahan sebagai "login" palsu yang selalu gagal.
+        if (alive) logout();
+      });
+
+    return () => {
+      alive = false;
+    };
+    // Sekali saat mount. Kuncinya session?.token, bukan objek session, supaya
+    // session yang diperbarui tidak memicu request ulang.
+  }, [session?.token]);
+
+  async function login({ email, password }) {
+    const data = await api("/seller/auth/login", {
+      method: "POST",
+      body: { email, password },
+      auth: false,
+    });
+    return startSession(data);
+  }
+
+  /**
+   * Daftar penjual baru. `storeName` wajib: server memakai nama ini untuk
+   * membuat baris vendors (kantin) bersama akun dan dompet dalam satu
+   * transaksi, dan menolaknya kalau kurang dari 3 karakter.
+   */
+  async function register({ name, storeName, email, password }) {
+    const data = await api("/seller/auth/register", {
+      method: "POST",
+      body: { name, storeName: storeName.trim(), email, password },
+      auth: false,
+    });
+    return startSession(data);
+  }
+
+  /**
+   * Ganti password. Argumen posisional (current, next) dipertahankan supaya
+   * ProfilePage tidak perlu diubah; body yang diminta server adalah
+   * { currentPassword, newPassword }.
+   */
+  async function changePassword(currentPassword, newPassword) {
+    if (!user) {
+      throw new Error("Silakan login terlebih dahulu.");
+    }
+    await api("/seller/auth/change-password", {
+      method: "POST",
+      body: { currentPassword, newPassword },
+    });
+  }
+
+  const value = { user, login, register, changePassword, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // Dipakai di komponen lain, contoh:
-// const { user, logout } = useAuth();
+// const { user, login, logout } = useAuth();
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) {

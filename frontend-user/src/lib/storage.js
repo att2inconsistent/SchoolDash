@@ -35,12 +35,17 @@ export function removeKey(key) {
 }
 
 export const STORAGE_KEYS = {
-  users: "schooldesk.auth.users",
+  // Session login: { token, user }. Satu-satunya kredensial yang disimpan
+  // di klien — password tidak pernah masuk localStorage.
   session: "schooldesk.auth.session",
-  pending: "schooldesk.auth.pendingRegistration",
-  otp: "schooldesk.auth.otpStore",
+
+  // Keranjang siswa masih lokal (keputusan §2: cart global, belum ikut server).
+  cart: "schooldesk.cart",
+
+  // Key di bawah ini masih dipakai OrderContext & WalletContext yang belum
+  // ditulis ulang (masih localStorage + setTimeout). Hapus bareng pemindahan
+  // context itu ke API — DB adalah sumber kebenaran sekarang.
   balances: "schooldesk.wallet.balances",
   transactions: "schooldesk.wallet.transactions",
-  cart: "schooldesk.cart",
   orders: "schooldesk.orders",
 };

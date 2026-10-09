@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useWallet } from "../context/WalletContext";
@@ -6,7 +6,7 @@ import WelcomeHeader from "../Component/Welcome/WelcomeHeader";
 import CategoryFilter from "../Component/Category/CategoryFilter";
 import VendorList from "../Component/Vendor/VendorList";
 import SearchResults, { SearchEmpty } from "../Component/Search/SearchResults";
-import { filterVendors, searchMenuItems, getCategoryLabel } from "../data/menuData";
+import { useCatalog } from "../context/CatalogContext";
 
 /**
  * Beranda sekaligus halaman hasil pencarian.
@@ -24,14 +24,26 @@ export default function BerandaPage() {
   const kategori = params.get("kategori") || "semua";
   const hasFilter = query.trim() !== "" || kategori !== "semua";
 
-  const filteredVendors = useMemo(
-    () => filterVendors({ query, kategori }),
-    [query, kategori]
-  );
-  const menuResults = useMemo(
-    () => (hasFilter ? searchMenuItems({ query, kategori }) : []),
-    [query, kategori, hasFilter]
-  );
+  const { loadVendors, loadMenus, getCategoryLabel } = useCatalog();
+  const [filteredVendors, setFilteredVendors] = useState([]);
+  const [menuResults, setMenuResults] = useState([]);
+  useEffect(() => {
+    const fetchPromises = [loadVendors(query, kategori)];
+    
+    if (hasFilter) {
+      fetchPromises.push(loadMenus(query, kategori));
+    } else {
+      fetchPromises.push(Promise.resolve([]));
+    }
+
+    Promise.all(fetchPromises)
+      .then(([v, m]) => {
+        setFilteredVendors(v);
+        setMenuResults(m);
+      })
+      .catch(console.error)
+      ;
+  }, [query, kategori, hasFilter, loadVendors, loadMenus]);
 
   function handleCategoryChange(key) {
     const next = new URLSearchParams(params);

@@ -1,240 +1,130 @@
 /* eslint-disable react-refresh/only-export-components -- context: provider + hook memang diekspor bersama */
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { readJSON, writeJSON, removeKey, STORAGE_KEYS } from "../lib/storage";
+import { api } from "../lib/api";
 
 const AuthContext = createContext(null);
 
 /**
- * ==========================================================================
- *  PLACEHOLDER AUTH — belum tersambung ke backend/database asli.
- *  Semua fungsi di bawah ini pakai data sementara (localStorage) dan
- *  setTimeout untuk mensimulasikan delay network. Tim backend nanti tinggal
- *  mengganti ISI fungsi login/register/verifyOtp/loginWithGoogle/
- *  changePassword dengan pemanggilan API asli (fetch/axios), TANPA perlu
- *  mengubah halaman LoginPage/RegisterPage/OtpPage/ProfilePage karena
- *  mereka hanya memanggil fungsi dari context ini.
+ * Auth siswa — tersambung ke backend.
  *
- *  PENTING: password disimpan plaintext HANYA untuk demo lokal.
- *  Di backend asli password wajib di-hash (bcrypt/argon2) di server.
- * ==========================================================================
+ * Perubahan dari versi placeholder:
+ *   - login/register/changePassword memanggil API beneran, bukan localStorage.
+ *   - Tidak ada lagi akun + password plaintext di localStorage. Yang disimpan
+ *     hanya { token, user } supaya refresh browser tidak mengeluarkan user.
+ *   - OTP dilewati (keputusan §2 #4): POST /auth/register langsung balas
+ *     { token, user }, jadi daftar = langsung login.
+ *   - verifyOtp/resendOtp/pendingRegistration/loginWithGoogle dihapus — tidak
+ *     ada endpoint-nya di server, dan loginWithGoogle lama memaksa user masuk
+ *     dengan akun palsu yang tidak ada di database.
+ *
+ * Password hanya dikirim ke POST /auth/login atau /auth/change-password, lalu
+ * di-hash server (bcrypt). Tidak pernah disimpan di sisi klien.
  */
 
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
-/** Sembunyikan password sebelum object user dipakai di UI. */
-function toSafeUser(u) {
-  if (!u) return null;
-  const copy = { ...u };
-  delete copy.password;
-  return copy;
+/** Bentuk session yang disimpan: { token, user }. */
+function loadSession() {
+  const raw = readJSON(STORAGE_KEYS.session, null);
+  // Versi lama menyimpan email sebagai string — abaikan, tidak ada tokennya.
+  if (!raw || typeof raw !== "object" || !raw.token) return null;
+  return raw;
 }
 
 export function AuthProvider({ children }) {
-  // "Database" user — dipersist supaya refresh browser tidak menghapus akun.
-  const [users, setUsers] = useState(() => readJSON(STORAGE_KEYS.users, []));
-  // Email user yang sedang login (null = belum login)
-  const [sessionEmail, setSessionEmail] = useState(() =>
-    readJSON(STORAGE_KEYS.session, null)
-  );
-  // Data pendaftar yang belum menyelesaikan verifikasi OTP
-  const [pendingRegistration, setPendingRegistration] = useState(() =>
-    readJSON(STORAGE_KEYS.pending, null)
-  );
+  // Diinisialisasi sinkron dari localStorage supaya RequireAuth tidak sempat
+  // memantulkan user ke /login saat refresh.
+  const [session, setSession] = useState(loadSession);
+  const user = session?.user ?? null;
 
-  // Kode OTP aktif per email (persist supaya refresh di halaman OTP tidak gagal)
-  const [otpStore, setOtpStore] = useState(() => readJSON(STORAGE_KEYS.otp, {}));
-
-  // User yang diekspos ke UI — password tidak pernah dikirim ke component.
-  const user = useMemo(
-    () => toSafeUser(users.find((u) => u.email === sessionEmail)),
-    [users, sessionEmail]
-  );
-
-  function saveUsers(next) {
-    setUsers(next);
-    writeJSON(STORAGE_KEYS.users, next);
-  }
-
-  function startSession(email) {
-    setSessionEmail(email);
-    writeJSON(STORAGE_KEYS.session, email);
-  }
-
-  function savePending(next) {
-    setPendingRegistration(next);
-    if (next) writeJSON(STORAGE_KEYS.pending, next);
-    else removeKey(STORAGE_KEYS.pending);
-  }
-
-  function saveOtp(next) {
-    setOtpStore(next);
-    writeJSON(STORAGE_KEYS.otp, next);
-  }
-
-  function login({ email, password }) {
-    // TODO(backend): ganti dengan POST /api/auth/login
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const found = users.find(
-          (u) => u.email === email && u.password === password
-        );
-        if (!found) {
-          reject(new Error("Email atau password salah."));
-          return;
-        }
-        startSession(found.email);
-        resolve(toSafeUser(found));
-      }, 500);
-    });
-  }
-
-  function loginWithGoogle() {
-    // TODO(backend): ganti dengan OAuth flow Google (Firebase Auth / OAuth2)
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const googleUser = {
-          name: "Pengguna Google",
-          email: "pengguna@gmail.com",
-          kelas: "-",
-          password: "",
-        };
-        if (!users.some((u) => u.email === googleUser.email)) {
-          saveUsers([...users, googleUser]);
-        }
-        startSession(googleUser.email);
-        resolve(toSafeUser(googleUser));
-      }, 500);
-    });
-  }
-
-  function register({ name, email, password, kelas }) {
-    // TODO(backend): ganti dengan POST /api/auth/register lalu kirim OTP
-    // lewat email asli (mis. Nodemailer/SendGrid), bukan console.log seperti ini.
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const exists = users.some((u) => u.email === email);
-        if (exists) {
-          reject(new Error("Email sudah terdaftar."));
-          return;
-        }
-
-        const otp = generateOtp();
-        saveOtp({ ...otpStore, [email]: otp });
-        savePending({ name, email, password, kelas });
-
-        // Placeholder pengganti "email OTP": tampil di console browser.
-        console.log(`[DEV ONLY] Kode OTP untuk ${email}: ${otp}`);
-
-        resolve({ email });
-      }, 500);
-    });
-  }
-
-  function verifyOtp(code) {
-    // TODO(backend): ganti dengan POST /api/auth/verify-otp
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!pendingRegistration) {
-          reject(new Error("Tidak ada proses registrasi yang berjalan."));
-          return;
-        }
-        const validOtp = otpStore[pendingRegistration.email];
-        if (code !== validOtp) {
-          reject(new Error("Kode OTP salah."));
-          return;
-        }
-
-        const newUser = { ...pendingRegistration };
-        saveUsers([...users, newUser]);
-        saveOtp(
-          Object.fromEntries(
-            Object.entries(otpStore).filter(
-              ([key]) => key !== pendingRegistration.email
-            )
-          )
-        );
-        startSession(newUser.email);
-        savePending(null);
-
-        resolve(toSafeUser(newUser));
-      }, 500);
-    });
-  }
-
-  function resendOtp() {
-    // TODO(backend): ganti dengan POST /api/auth/resend-otp
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!pendingRegistration) {
-          reject(new Error("Tidak ada proses registrasi yang berjalan."));
-          return;
-        }
-        const otp = generateOtp();
-        saveOtp({ ...otpStore, [pendingRegistration.email]: otp });
-        console.log(
-          `[DEV ONLY] Kode OTP baru untuk ${pendingRegistration.email}: ${otp}`
-        );
-        resolve();
-      }, 400);
-    });
-  }
-
-  /**
-   * Ganti password user yang sedang login.
-   * TODO(backend): ganti dengan POST /api/auth/change-password
-   * (cek password lama di server, lalu simpan hash baru).
-   */
-  function changePassword(currentPassword, newPassword) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!user) {
-          reject(new Error("Silakan login terlebih dahulu."));
-          return;
-        }
-        const index = users.findIndex((u) => u.email === user.email);
-        if (index === -1 || users[index].password !== currentPassword) {
-          reject(new Error("Password saat ini tidak sesuai."));
-          return;
-        }
-        if (newPassword.length < 8) {
-          reject(new Error("Password baru minimal 8 karakter."));
-          return;
-        }
-        if (currentPassword === newPassword) {
-          reject(
-            new Error("Password baru tidak boleh sama dengan password lama.")
-          );
-          return;
-        }
-
-        saveUsers(
-          users.map((u, i) =>
-            i === index ? { ...u, password: newPassword } : u
-          )
-        );
-        resolve();
-      }, 500);
-    });
+  function startSession({ token, user: nextUser }) {
+    const next = { token, user: nextUser };
+    setSession(next);
+    writeJSON(STORAGE_KEYS.session, next);
+    return next.user;
   }
 
   function logout() {
-    setSessionEmail(null);
+    setSession(null);
     removeKey(STORAGE_KEYS.session);
   }
 
-  const value = {
-    user,
-    pendingRegistration,
-    login,
-    loginWithGoogle,
-    register,
-    verifyOtp,
-    resendOtp,
-    changePassword,
-    logout,
-  };
+  /**
+   * Cek token yang tersimpan masih valid. Dipanggil sekali saat app dimuat:
+   * kalau token kedaluwarsa atau dicabut, hapus sekalian supaya user tidak
+   * melihat UI "sudah masuk" lalu gagal di request berikutnya.
+   */
+  useEffect(() => {
+    if (!session?.token) return;
+
+    let alive = true;
+    api("/auth/me")
+      .then(({ user: fresh }) => {
+        if (!alive || !fresh) return;
+        setSession((prev) => {
+          if (!prev?.token) return prev;
+          const next = { token: prev.token, user: fresh };
+          writeJSON(STORAGE_KEYS.session, next);
+          return next;
+        });
+      })
+      .catch(() => {
+        // Token ditolak atau server mati — sesi dihapus supaya tidak
+        // bertahan sebagai "login" palsu yang selalu gagal.
+        if (alive) logout();
+      });
+
+    return () => {
+      alive = false;
+    };
+    // Sekali saat mount. Kuncinya session?.token, bukan objek session, supaya
+    // session yang diperbarui tidak memicu request ulang.
+  }, [session?.token]);
+
+  async function login({ email, password }) {
+    const data = await api("/auth/login", {
+      method: "POST",
+      body: { email, password },
+      auth: false,
+    });
+    return startSession(data);
+  }
+
+  /**
+   * Daftar siswa baru. Backend membuat akun + dompet dalam satu transaksi dan
+   * membalas { token, user }, jadi tidak ada tahap verifikasi tambahan.
+   *
+   * `kelas` hanya dikirim kalau terisi: RegisterPage mewajibkan select, tapi
+   * string kosong akan tersimpan sebagai kelas kosong, sedangkan default
+   * server '-' lebih benar.
+   */
+  async function register({ name, email, password, kelas }) {
+    const body = { name, email, password };
+    if (kelas && kelas.trim()) body.kelas = kelas.trim();
+
+    const data = await api("/auth/register", {
+      method: "POST",
+      body,
+      auth: false,
+    });
+    return startSession(data);
+  }
+
+  /**
+   * Ganti password. Argumen posisional (current, next) dipertahankan supaya
+   * ProfilePage tidak perlu diubah; body yang diminta server adalah
+   * { currentPassword, newPassword }.
+   */
+  async function changePassword(currentPassword, newPassword) {
+    if (!user) {
+      throw new Error("Silakan login terlebih dahulu.");
+    }
+    await api("/auth/change-password", {
+      method: "POST",
+      body: { currentPassword, newPassword },
+    });
+  }
+
+  const value = { user, login, register, changePassword, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

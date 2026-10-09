@@ -14,7 +14,6 @@ import BottomNav from "./Component/Navbar/BottomNav";
 import Topbar from "./Component/Topbar/Topbar";
 import LoginPage from "./Component/Auth/LoginPage";
 import RegisterPage from "./Component/Auth/RegisterPage";
-import OtpPage from "./Component/Auth/OtpPage";
 import VendorMenuPage from "./Component/Menu/VendorMenuPage";
 import PesananSayaPage from "./Component/Pesanan/PesananSayaPage";
 import TopUpPage from "./Component/TopUp/TopUpPage";
@@ -22,11 +21,13 @@ import ProfilePage from "./Component/Profile/ProfilePage";
 import FloatingCartBar from "./Component/Cart/FloatingCartBar";
 import BerandaPage from "./pages/BerandaPage";
 import PageStage from "./Component/Layout/PageStage";
-import { getMenuByVendor, getVendorById } from "./data/menuData";
+
+import { useCatalog } from "./context/CatalogContext";
+import { useState, useEffect } from "react";
 import { playIntro } from "./animation/intro";
 import "./App.css";
 
-const AUTH_PATHS = ["/login", "/register", "/otp"];
+const AUTH_PATHS = ["/login", "/register"];
 
 /** Halaman auth tidak boleh dibuka kalau sudah login. */
 function GuestOnly({ children }) {
@@ -56,31 +57,30 @@ function RequireAuth({ children, message }) {
 function VendorMenuRoute() {
   const { vendorId } = useParams();
   const navigate = useNavigate();
-  const vendor = getVendorById(vendorId);
+  const { getVendor, getVendorMenus } = useCatalog();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
 
-  if (!vendor) return <Navigate to="/" replace />;
+  useEffect(() => {
+    const numericId = Number(vendorId);
+    if (isNaN(numericId)) return;
+
+    Promise.all([getVendor(numericId), getVendorMenus(numericId)])
+      .then(([v, m]) => {
+        if (!v) setError(true);
+        else setData({ vendor: v, menuItems: m });
+      })
+      .catch(() => setError(true));
+  }, [vendorId, getVendor, getVendorMenus]);
+
+  if (isNaN(Number(vendorId)) || error) return <Navigate to="/" replace />;
+  if (!data) return <div style={{ padding: "2rem", textAlign: "center" }}>Memuat menu...</div>;
 
   return (
     <VendorMenuPage
-      vendor={vendor}
-      menuItems={getMenuByVendor(vendorId)}
+      vendor={data.vendor}
+      menuItems={data.menuItems}
       onBack={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/"))}
-    />
-  );
-}
-
-/** Halaman OTP — kalau tidak ada proses registrasi, kembali ke form daftar. */
-function OtpRoute() {
-  const navigate = useNavigate();
-  const { pendingRegistration } = useAuth();
-
-  if (!pendingRegistration) return <Navigate to="/register" replace />;
-
-  return (
-    <OtpPage
-      email={pendingRegistration.email}
-      onVerifySuccess={() => navigate("/", { replace: true })}
-      onBack={() => navigate("/register")}
     />
   );
 }
@@ -203,14 +203,11 @@ function Shell() {
                   <GuestOnly>
                     <RegisterPage
                       onNavigateLogin={() => navigate("/login")}
-                      onRegisterSuccess={() => navigate("/otp")}
                       onLoginSuccess={() => navigate("/", { replace: true })}
                     />
                   </GuestOnly>
                 }
               />
-
-              <Route path="/otp" element={<OtpRoute />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

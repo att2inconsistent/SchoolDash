@@ -71,12 +71,6 @@ export default function LoginPage({
         </button>
       </form>
 
-      <div className="auth-demo-box">
-        <strong>Akun demo</strong>
-        <span>konsinyasi@seller.test / password123</span>
-        <span>jus@seller.test / password123</span>
-      </div>
-
       <p className="auth-footer-text">
         Belum punya akun?{" "}
         <button className="auth-footer-link" onClick={onNavigateRegister}>

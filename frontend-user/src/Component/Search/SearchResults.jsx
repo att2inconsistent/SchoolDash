@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { getCategoryLabel } from "../../data/menuData";
+import { useCatalog } from "../../context/CatalogContext";
 import "./SearchResults.css";
 
 function formatRupiah(value) {
@@ -19,6 +19,7 @@ const searchIcon = (
  * menu vendor.
  */
 export default function SearchResults({ items = [], query = "", kategori = "semua" }) {
+  const { getCategoryLabel } = useCatalog();
   const navigate = useNavigate();
 
   const hasQuery = query.trim() !== "";
