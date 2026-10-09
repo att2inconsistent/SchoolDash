@@ -1,167 +1,119 @@
 /* eslint-disable react-refresh/only-export-components -- context: provider + hook memang diekspor bersama */
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./AuthContext";
-import { readJSON, writeJSON, ensureSeed, STORAGE_KEYS } from "../lib/storage";
-import {
-  SEED_BALANCES,
-  SEED_EARNINGS,
-  SEED_WITHDRAWALS,
-} from "../data/seed";
+import { api } from "../lib/api";
 
 const WalletContext = createContext(null);
 
 /**
- * ==========================================================================
- *  PLACEHOLDER DOMPET PENJUAL — saldo hasil pesanan + penarikan antar bank.
+ * Dompet penjual — saldo, riwayat pendapatan, dan penarikan dari backend.
+ *   saldo        -> GET  /seller/wallet
+ *   riwayat      -> GET  /seller/wallet/transactions  (kind: earning | withdrawal)
+ *   tarik dana   -> POST /seller/wallet/withdrawals   (server debit + catat transaksi)
  *
- *  Alur duit:
- *    1. Pesanan diterima      -> creditEarning()  -> saldo bertambah
- *    2. Tarik dana (transfer) -> withdraw()       -> saldo terpotong
+ * Kredit dana dari pesanan dikerjakan server saat seller accept order
+ * (transaksi kind 'earning') — tidak ada pemanggilan creditEarning manual.
  *
- *  TODO(backend) — ganti isi fungsi dengan API:
- *    creditEarning -> POST /api/seller/earnings   (dipanggil dari OrderContext)
- *    withdraw      -> POST /api/seller/withdrawals (backend yang benar-benar
- *                     mentransfer via payment gateway / bank API)
- *    saldo         -> GET  /api/seller/wallet
- * ==========================================================================
+ * Data dikunci per userKey: ganti akun / logout langsung derive null/[]
+ * tanpa setState sinkron di dalam effect (larangan react-hooks/set-state-in-effect).
  */
-
 export function WalletProvider({ children }) {
   const { user } = useAuth();
+  const userKey = user ? `${user.id}:${user.email}` : "guest";
 
-  const [balances, setBalances] = useState(() => {
-    ensureSeed(STORAGE_KEYS.balances, SEED_BALANCES);
-    return readJSON(STORAGE_KEYS.balances, {});
-  });
-  const [earnings, setEarnings] = useState(() => {
-    ensureSeed(STORAGE_KEYS.earnings, SEED_EARNINGS);
-    return readJSON(STORAGE_KEYS.earnings, []);
-  });
-  const [withdrawals, setWithdrawals] = useState(() => {
-    ensureSeed(STORAGE_KEYS.withdrawals, SEED_WITHDRAWALS);
-    return readJSON(STORAGE_KEYS.withdrawals, []);
-  });
+  // { key, balance, earnings, withdrawals } — berlaku selama key cocok
+  const [store, setStore] = useState(null);
 
-  useEffect(() => writeJSON(STORAGE_KEYS.balances, balances), [balances]);
-  useEffect(() => writeJSON(STORAGE_KEYS.earnings, earnings), [earnings]);
-  useEffect(
-    () => writeJSON(STORAGE_KEYS.withdrawals, withdrawals),
-    [withdrawals]
-  );
-
-  // Data milik seller yang sedang login
-  const myEarnings = useMemo(
-    () =>
-      earnings
-        .filter((e) => e.email === user?.email)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
-    [earnings, user]
-  );
-  const myWithdrawals = useMemo(
-    () =>
-      withdrawals
-        .filter((w) => w.email === user?.email)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
-    [withdrawals, user]
-  );
-
-  const balance = user ? balances[user.email] ?? 0 : null;
-  const totalEarned = myEarnings.reduce((sum, e) => sum + e.amount, 0);
-  const totalWithdrawn = myWithdrawals.reduce((sum, w) => sum + w.amount, 0);
-
-  /**
-   * Catat dana masuk dari pesanan yang baru diterima.
-   * TODO(backend): POST /api/seller/earnings — server yang menghitung saldo.
-   */
-  function creditEarning({ amount, orderId = null, note = "" }) {
-    if (!user || !(amount > 0)) return;
-
-    const earning = {
-      id: "EAR-" + Date.now().toString(36).toUpperCase(),
-      email: user.email,
-      orderId,
-      amount: Number(amount),
-      note: note || (orderId ? `Pesanan ${orderId}` : "Pendapatan"),
-      createdAt: new Date().toISOString(),
+  const refreshWallet = useCallback(async () => {
+    if (!user) return null;
+    const [wallet, res] = await Promise.all([
+      api("/seller/wallet"),
+      api("/seller/wallet/transactions"),
+    ]);
+    const next = {
+      key: userKey,
+      balance: wallet.balance,
+      earnings: [],
+      withdrawals: [],
     };
+    for (const t of res.transactions ?? []) {
+      if (t.kind === "earning") {
+        next.earnings.push(t);
+      } else if (t.kind === "withdrawal") {
+        // server menyimpan penarikan sebagai angka negatif; UI menampilkan
+        // "− Rp…", jadi simpan nilai positif agar tidak jadi "− Rp-10.000"
+        next.withdrawals.push({ ...t, amount: Math.abs(t.amount) });
+      }
+    }
+    setStore(next);
+    return next;
+  }, [user, userKey]);
 
-    setEarnings((prev) => [earning, ...prev]);
-    setBalances((prev) => ({
-      ...prev,
-      [user.email]: (prev[user.email] ?? 0) + Number(amount),
-    }));
-    return earning;
-  }
+  useEffect(() => {
+    if (!user) return undefined;
+    let alive = true;
+    // rantai promise langsung (bukan lewat refreshWallet) supaya setStore
+    // tidak terbaca sebagai setState sinkron di dalam effect
+    Promise.all([api("/seller/wallet"), api("/seller/wallet/transactions")])
+      .then(([wallet, res]) => {
+        if (!alive) return;
+        const next = {
+          key: userKey,
+          balance: wallet.balance,
+          earnings: [],
+          withdrawals: [],
+        };
+        for (const t of res.transactions ?? []) {
+          if (t.kind === "earning") {
+            next.earnings.push(t);
+          } else if (t.kind === "withdrawal") {
+            // server menyimpan penarikan negatif; UI sudah menampilkan "−"
+            next.withdrawals.push({ ...t, amount: Math.abs(t.amount) });
+          }
+        }
+        setStore(next);
+      })
+      .catch(() => {
+        // biarkan store null (saldo tampil "-") kalau endpoint gagal
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user, userKey]);
 
   /**
-   * Tarik dana ke rekening bank (transfer antar bank).
-   * Instan: saldo langsung terpotong dan penarikan langsung berstatus "Selesai".
-   *
-   * TODO(backend): POST /api/seller/withdrawals — nanti disambungkan ke
-   * payment gateway / transfer bank (mis. Midtrans Disbursement, Xendit,
-   * or bank API). UI tidak perlu diubah.
+   * Tarik dana ke rekening bank. Validasi (bank, nomor rekening, saldo)
+   * sepenuhnya di server — pesan galatnya yang ditampilkan verbatim.
    */
-  function withdraw({ bank, accountName, accountNumber, amount }) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!user) {
-          reject(new Error("Silakan login terlebih dahulu."));
-          return;
-        }
-        if (!bank) {
-          reject(new Error("Pilih bank tujuan."));
-          return;
-        }
-        if (!accountNumber || accountNumber.trim().length < 6) {
-          reject(new Error("Nomor rekening minimal 6 digit."));
-          return;
-        }
-        const value = Number(amount);
-        if (!(value > 0)) {
-          reject(new Error("Nominal penarikan harus lebih dari 0."));
-          return;
-        }
-        if (value > (balances[user.email] ?? 0)) {
-          reject(new Error("Saldo tidak mencukupi."));
-          return;
-        }
-
-        const record = {
-          id: "WDR-" + Date.now().toString(36).toUpperCase(),
-          email: user.email,
-          bank,
-          accountName: (accountName || user.name).trim(),
-          accountNumber: accountNumber.trim(),
-          amount: value,
-          status: "Selesai",
-          createdAt: new Date().toISOString(),
-        };
-
-        setWithdrawals((prev) => [record, ...prev]);
-        setBalances((prev) => ({
-          ...prev,
-          [user.email]: (prev[user.email] ?? 0) - value,
-        }));
-        resolve(record);
-      }, 600);
+  async function withdraw({ bank, accountName, accountNumber, amount }) {
+    const res = await api("/seller/wallet/withdrawals", {
+      method: "POST",
+      body: { bank, accountName, accountNumber, amount },
     });
+    await refreshWallet();
+    // server membalas { withdrawal: {...} } dengan amount negatif
+    const record = res.withdrawal;
+    return { ...record, amount: Math.abs(record.amount) };
   }
 
-  const value = {
-    balance,
-    totalEarned,
-    totalWithdrawn,
-    earnings: myEarnings,
-    withdrawals: myWithdrawals,
-    creditEarning,
-    withdraw,
-  };
+  const wallet = store && store.key === userKey ? store : null;
+
+  const value = useMemo(() => {
+    const earnings = wallet?.earnings ?? [];
+    const withdrawals = wallet?.withdrawals ?? [];
+    return {
+      balance: user && wallet ? wallet.balance : null,
+      totalEarned: earnings.reduce((sum, e) => sum + e.amount, 0),
+      totalWithdrawn: withdrawals.reduce((sum, w) => sum + w.amount, 0),
+      earnings,
+      withdrawals,
+      withdraw,
+      refreshWallet,
+    };
+    // withdraw dibuat ulang tiap render; daftar dependensi memakai versi dari
+    // render terakhir supaya closure-nya selalu segar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, wallet, refreshWallet]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { useAuth } from "./AuthContext";
+import { useWallet } from "./WalletContext";
 import { api } from "../lib/api";
 
 const OrderContext = createContext(null);
@@ -25,6 +26,7 @@ const OrderContext = createContext(null);
  */
 export function OrderProvider({ children }) {
   const { user } = useAuth();
+  const { refreshBalance } = useWallet();
   // Data bertanda pemilik (`userKey`) lalu di-derive saat render: logout /
   // ganti akun otomatis menampilkan [] tanpa setState di dalam effect
   // (dilarang react-hooks/set-state-in-effect).
@@ -83,6 +85,8 @@ export function OrderProvider({ children }) {
       userKey,
       orders: prev.userKey === userKey ? [order, ...prev.orders] : [order],
     }));
+    // saldo baru dipotong server — tarik ulang supaya Beranda/TopUp tidak basi
+    refreshBalance().catch(() => {});
     return order;
   }
 
