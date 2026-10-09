@@ -38,13 +38,15 @@ export default function PesananSayaPage() {
   const { createOrder } = useOrders();
   const navigate = useNavigate();
   const [placedOrder, setPlacedOrder] = useState(null);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [placing, setPlacing] = useState(false);
 
   // Tanpa biaya layanan, total = subtotal (backend orders/service.ts juga
   // menyimpan total = subtotal, jadi angka di sini sama dengan yang disimpan).
   const total = subtotal;
 
-  function handleCheckout() {
-    if (items.length === 0) return;
+  async function handleCheckout() {
+    if (items.length === 0 || placing) return;
 
     // Riwayat pesanan disimpan per-user, jadi wajib login dulu.
     if (!user) {
@@ -57,10 +59,21 @@ export default function PesananSayaPage() {
       return;
     }
 
-    // TODO: sambungkan ke API pemesanan/pembayaran di sini
-    const order = createOrder({ items, total });
-    clearCart();
-    setPlacedOrder(order);
+    setCheckoutError("");
+    setPlacing(true);
+    try {
+      // Total dihitung server dari harga DB; saldo dipotong dalam
+      // transaksi yang sama — pesan gagalnya ("Saldo tidak mencukupi.",
+      // "Semua menu dalam pesanan harus dari kantin yang sama.", dst.)
+      // tampil verbatim di sini.
+      const order = await createOrder({ items });
+      clearCart();
+      setPlacedOrder(order);
+    } catch (err) {
+      setCheckoutError(err.message);
+    } finally {
+      setPlacing(false);
+    }
   }
 
   return (
@@ -99,6 +112,12 @@ export default function PesananSayaPage() {
         </div>
       )}
 
+      {checkoutError && (
+        <div className="pesanan-error" role="alert">
+          {checkoutError}
+        </div>
+      )}
+
       <div className="pesanan-page-layout">
         <section className="pesanan-list-card">
           {items.length === 0 ? (
@@ -133,8 +152,12 @@ export default function PesananSayaPage() {
               <span>{formatRupiah(total)}</span>
             </div>
 
-            <button className="pesanan-checkout-btn" onClick={handleCheckout}>
-              Pesan Sekarang
+            <button
+              className="pesanan-checkout-btn"
+              onClick={handleCheckout}
+              disabled={placing}
+            >
+              {placing ? "Memproses..." : "Pesan Sekarang"}
             </button>
           </aside>
         )}

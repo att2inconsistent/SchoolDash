@@ -6,55 +6,47 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useMenu } from "./MenuContext";
-import { useWallet } from "./WalletContext";
-import { readJSON, writeJSON, ensureSeed, STORAGE_KEYS } from "../lib/storage";
-import { SEED_ORDERS } from "../data/seed";
+import { useAuth } from "./AuthContext";
+import { api } from "../lib/api";
 
 const OrderContext = createContext(null);
 
-const fakeLatency = (ms = 400) => new Promise((r) => setTimeout(r, ms));
-
-const DEMO_BUYERS = [
-  { name: "Fajar Nugroho", kelas: "X-RPL" },
-  { name: "Maya Putri", kelas: "XI-DKV" },
-  { name: "Rizky Ramadhan", kelas: "XII-AKL" },
-];
-
 /**
  * ==========================================================================
- *  PLACEHOLDER PESANAN MASUK — pesanan dari aplikasi pembeli (frontend-user).
+ *  PESANAN MASUK — pesanan dari aplikasi pembeli (frontend-user), dibaca
+ *  langsung dari backend.
  *
- *  Alur: pesanan berstatus "Menunggu" -> seller klik Terima -> status jadi
- *  "Selesai" dan duitnya dicatat ke saldo lewat WalletContext.creditEarning().
+ *  Alur status: "Menunggu" -> seller Terima -> "Selesai".
+ *  Saat status jadi "Selesai", server yang mengkredit saldo seller di DALAM
+ *  transaksi database — jadi creditEarning() manual TIDAK dipanggil lagi
+ *  (kalau dipanggil, uangnya double-count begitu WalletContext tersambung).
  *
- *  TODO(backend) — ganti dengan API:
- *    baca pesanan -> GET  /api/seller/orders?vendorId=...
- *    terima       -> POST /api/seller/orders/:id/accept
- *    (pesanan baru dari pembeli otomatis muncul karena datang dari server)
+ *    baca pesanan -> GET   /api/seller/orders
+ *    terima       -> PATCH /api/seller/orders/:id  { status: "Selesai" }
  * ==========================================================================
  */
-
 export function OrderProvider({ children }) {
-  const { myVendor, myMenus } = useMenu();
-  const { creditEarning } = useWallet();
+  const { user } = useAuth();
 
-  const [orders, setOrders] = useState(() => {
-    ensureSeed(STORAGE_KEYS.orders, SEED_ORDERS);
-    return readJSON(STORAGE_KEYS.orders, []);
-  });
+  // Data bertanda pemilik (`userKey`) lalu di-derive saat render: logout /
+  // ganti akun otomatis menampilkan [] tanpa setState di dalam effect
+  // (dilarang react-hooks/set-state-in-effect).
+  const [store, setStore] = useState({ userKey: null, orders: [] });
 
-  useEffect(() => {
-    writeJSON(STORAGE_KEYS.orders, orders);
-  }, [orders]);
+  const userKey = user?.email ?? null;
+  const rawOrders = useMemo(
+    () => (userKey && store.userKey === userKey ? store.orders : []),
+    [userKey, store]
+  );
 
-  // Pesanan milik kantin seller yang sedang login, terbaru di atas.
+  // Field buyer dipetakan dari snapshot backend: studentName/studentKelas.
   const myOrders = useMemo(
     () =>
-      orders
-        .filter((o) => o.vendorId === myVendor?.id)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
-    [orders, myVendor]
+      rawOrders.map((o) => ({
+        ...o,
+        buyer: { name: o.studentName || "-", kelas: o.studentKelas || "" },
+      })),
+    [rawOrders]
   );
 
   const stats = useMemo(
@@ -68,89 +60,56 @@ export function OrderProvider({ children }) {
     [myOrders]
   );
 
+  useEffect(() => {
+    if (!userKey) return;
+
+    let alive = true;
+
+    api("/seller/orders")
+      .then((res) => {
+        if (alive) setStore({ userKey, orders: res.orders });
+      })
+      .catch((err) => console.error(err));
+
+    return () => {
+      alive = false;
+    };
+  }, [userKey]);
+
   /**
-   * Terima pesanan -> duit masuk ke saldo seller.
-   * TODO(backend): POST /api/seller/orders/:id/accept —
-   * server yang menandai pesanan & mengkredit saldo.
+   * Terima pesanan -> status "Selesai" dan saldo dikredit oleh server.
+   * Pesan error server (mis. "Pesanan ini sudah selesai.") diteruskan apa
+   * adanya ke UI.
    */
   async function acceptOrder(id) {
-    await fakeLatency();
-
-    const order = orders.find((o) => o.id === id);
-    if (!order) throw new Error("Pesanan tidak ditemukan.");
-    if (order.vendorId !== myVendor?.id) {
-      throw new Error("Pesanan ini bukan milik kantin Anda.");
-    }
-    if (order.status !== "Menunggu") {
-      throw new Error("Pesanan ini sudah diproses.");
-    }
-
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === id ? { ...o, status: "Selesai", credited: true } : o
-      )
-    );
-
-    // Duitnya tersimpan di akun seller
-    creditEarning({
-      amount: order.total,
-      orderId: order.id,
-      note: `Pesanan ${order.id}`,
+    const res = await api(`/seller/orders/${id}`, {
+      method: "PATCH",
+      body: { status: "Selesai" },
     });
-
-    return { ...order, status: "Selesai", credited: true };
+    setStore((prev) => ({
+      ...prev,
+      orders: prev.orders.map((o) => (o.id === id ? res.order : o)),
+    }));
+    return {
+      ...res.order,
+      buyer: {
+        name: res.order.studentName || "-",
+        kelas: res.order.studentKelas || "",
+      },
+    };
   }
 
-  /**
-   * Muat pesanan contoh untuk kantin ini.
-   * HANYA placeholder demo — di mode sekarang pesanan pembeli dari
-   * frontend-user belum bisa nyambung (belum ada backend).
-   * TODO(backend): hapus fungsi ini, pesanan asli datang otomatis dari API.
-   */
-  async function loadDemoOrders() {
-    await fakeLatency(350);
-    if (!myVendor) throw new Error("Kantin belum ditemukan.");
-    if (myMenus.length === 0) {
-      throw new Error("Tambahkan menu dulu sebelum memuat pesanan contoh.");
-    }
-
-    const pool = [...myMenus];
-    const items = [];
-    const wanted = Math.min(2, pool.length);
-    for (let i = 0; i < wanted; i++) {
-      const menu = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-      const qty = 1 + Math.floor(Math.random() * 2);
-      items.push({
-        id: menu.id,
-        name: menu.name,
-        price: menu.price,
-        qty,
-      });
-    }
-
-    const buyer = DEMO_BUYERS[Math.floor(Math.random() * DEMO_BUYERS.length)];
-    const order = {
-      id: "ORD-" + Date.now().toString(36).toUpperCase(),
-      createdAt: new Date().toISOString(),
-      status: "Menunggu",
-      credited: false,
-      vendorId: myVendor.id,
-      vendor: myVendor.name,
-      buyer: { ...buyer },
-      items,
-      totalItems: items.reduce((sum, it) => sum + it.qty, 0),
-      total: items.reduce((sum, it) => sum + it.price * it.qty, 0),
-    };
-
-    setOrders((prev) => [order, ...prev]);
-    return order;
+  /** Tarik ulang pesanan dari server (untuk refresh manual). */
+  async function refreshOrders() {
+    const res = await api("/seller/orders");
+    setStore({ userKey, orders: res.orders });
   }
 
   const value = {
     orders: myOrders,
     ...stats,
     acceptOrder,
-    loadDemoOrders,
+    refreshOrders,
   };
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;

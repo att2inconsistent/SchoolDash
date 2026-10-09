@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CATEGORIES } from "../../data/seed";
 import { formatRupiah } from "../../lib/format";
-import { fileToDataUrl } from "../../lib/image";
+import { api } from "../../lib/api";
 
 /**
  * Form tambah/ubah menu (modal).
@@ -32,7 +32,8 @@ export default function MenuFormModal({ menu, onSave, onClose }) {
     }));
   }
 
-  // Upload gambar: file dibaca jadi data URL lalu dikompres (lihat lib/image).
+  // Upload gambar: file dikirim ke backend (POST /api/seller/upload),
+  // kolom image menyimpan URL hasil upload — bukan data URL base64.
   async function handleImageChange(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -40,8 +41,10 @@ export default function MenuFormModal({ menu, onSave, onClose }) {
     setImageError("");
     setImageUploading(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setForm((prev) => ({ ...prev, image: dataUrl }));
+      const body = new FormData();
+      body.append("image", file);
+      const res = await api("/seller/upload", { method: "POST", body });
+      setForm((prev) => ({ ...prev, image: res.url }));
     } catch (err) {
       setImageError(err.message || "Gambar gagal diunggah.");
     } finally {
@@ -175,6 +178,7 @@ export default function MenuFormModal({ menu, onSave, onClose }) {
             <input
               id="menu-image"
               className="menu-form-file"
+              name="image"
               type="file"
               accept="image/*"
               onChange={handleImageChange}
@@ -183,7 +187,7 @@ export default function MenuFormModal({ menu, onSave, onClose }) {
             <span className="field-hint">
               {imageUploading
                 ? "Mengunggah gambar..."
-                : "Format JPG/PNG/WebP, maksimal 5 MB. Gambar otomatis dikompres."}
+                : "Format JPG/PNG/WebP, maksimal 5 MB."}
             </span>
             {imageError && <span className="menu-form-file-error">{imageError}</span>}
             {form.image && (

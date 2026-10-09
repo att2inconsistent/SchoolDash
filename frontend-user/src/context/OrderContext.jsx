@@ -7,76 +7,87 @@ import {
   useState,
 } from "react";
 import { useAuth } from "./AuthContext";
-import { readJSON, writeJSON, STORAGE_KEYS } from "../lib/storage";
+import { api } from "../lib/api";
 
 const OrderContext = createContext(null);
 
 /**
  * ==========================================================================
- *  PLACEHOLDER ORDER — riwayat pemesanan disimpan per-email di localStorage.
- *  Saat backend sudah ada, ganti isi createOrder dengan POST /api/orders
- *  dan ganti pembacaan orders dengan GET /api/orders (profil tidak perlu
- *  diubah karena hanya memanggil data dari context ini).
+ *  RIWAYAT PESANAN — dibaca & ditulis lewat backend (bukan localStorage).
+ *
+ *    baca riwayat -> GET  /api/orders
+ *    buat pesanan -> POST /api/orders  { items: [{ menuItemId, qty }] }
+ *
+ *  Harga & total TIDAK dikirim — server menghitung ulang dari harga di
+ *  database (mencegah manipulasi harga dari client). Server juga memotong
+ *  saldo dalam transaksi yang sama; kalau saldo kurang, pesanan dibatalkan.
  * ==========================================================================
  */
-
 export function OrderProvider({ children }) {
   const { user } = useAuth();
-  const [ordersByEmail, setOrdersByEmail] = useState(() =>
-    readJSON(STORAGE_KEYS.orders, {})
+  // Data bertanda pemilik (`userKey`) lalu di-derive saat render: logout /
+  // ganti akun otomatis menampilkan [] tanpa setState di dalam effect
+  // (dilarang react-hooks/set-state-in-effect).
+  const [store, setStore] = useState({ userKey: null, orders: [] });
+
+  const userKey = user?.email ?? null;
+  const orders = useMemo(
+    () => (userKey && store.userKey === userKey ? store.orders : []),
+    [userKey, store]
   );
-
-  useEffect(() => {
-    writeJSON(STORAGE_KEYS.orders, ordersByEmail);
-  }, [ordersByEmail]);
-
-  // Riwayat milik user yang sedang login
-  const myOrders = useMemo(() => {
-    if (!user) return [];
-    return ordersByEmail[user.email] ?? [];
-  }, [ordersByEmail, user]);
 
   const stats = useMemo(
     () => ({
       // berapa kali user sudah memesan
-      totalOrders: myOrders.length,
-      totalItemsBought: myOrders.reduce((sum, o) => sum + o.totalItems, 0),
-      totalSpent: myOrders.reduce((sum, o) => sum + o.total, 0),
+      totalOrders: orders.length,
+      totalItemsBought: orders.reduce((sum, o) => sum + o.totalItems, 0),
+      totalSpent: orders.reduce((sum, o) => sum + o.total, 0),
     }),
-    [myOrders]
+    [orders]
   );
 
-  function createOrder({ items, total }) {
+  useEffect(() => {
+    if (!userKey) return;
+
+    let alive = true;
+    api("/orders")
+      .then((res) => {
+        if (alive) setStore({ userKey, orders: res.orders });
+      })
+      .catch((err) => console.error(err));
+
+    return () => {
+      alive = false;
+    };
+  }, [userKey]);
+
+  /**
+   * Checkout: keranjang dikirim sebagai id menu + jumlah saja. Server
+   * menghitung total dari harga DB dan memotong saldo — pesan errornya
+   * (mis. "Saldo tidak mencukupi.") diteruskan apa adanya.
+   */
+  async function createOrder({ items }) {
     if (!user) {
       throw new Error("Silakan login terlebih dahulu.");
     }
 
-    const order = {
-      id: "ORD-" + Date.now().toString(36).toUpperCase(),
-      createdAt: new Date().toISOString(),
-      status: "Selesai",
-      items: items.map((it) => ({
-        id: it.id,
-        name: it.name,
-        vendor: it.vendor || "-",
-        vendorId: it.vendorId ?? null,
-        price: it.price,
-        qty: it.qty,
-      })),
-      totalItems: items.reduce((sum, it) => sum + it.qty, 0),
-      total,
-    };
+    const res = await api("/orders", {
+      method: "POST",
+      body: {
+        items: items.map((it) => ({ menuItemId: it.id, qty: it.qty })),
+      },
+    });
 
-    setOrdersByEmail((prev) => ({
-      ...prev,
-      [user.email]: [order, ...(prev[user.email] ?? [])],
+    const order = res.order;
+    setStore((prev) => ({
+      userKey,
+      orders: prev.userKey === userKey ? [order, ...prev.orders] : [order],
     }));
-
     return order;
   }
 
   const value = {
-    orders: myOrders,
+    orders,
     createOrder,
     ...stats,
   };

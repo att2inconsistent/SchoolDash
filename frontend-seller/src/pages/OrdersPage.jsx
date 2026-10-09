@@ -17,11 +17,10 @@ const receiptIcon = (
 );
 
 export default function OrdersPage() {
-  const { orders, acceptOrder, loadDemoOrders } = useOrders();
+  const { orders, acceptOrder } = useOrders();
 
   const [filter, setFilter] = useState("semua");
   const [busyId, setBusyId] = useState(null);
-  const [loadingDemo, setLoadingDemo] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -51,20 +50,6 @@ export default function OrdersPage() {
     }
   }
 
-  async function handleLoadDemo() {
-    setError("");
-    setSuccess("");
-    setLoadingDemo(true);
-    try {
-      const order = await loadDemoOrders();
-      setSuccess(`Pesanan contoh ${order.id} berhasil dimuat.`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingDemo(false);
-    }
-  }
-
   return (
     <div className="orders-page">
       <div className="section-header">
@@ -74,14 +59,6 @@ export default function OrdersPage() {
             <span className="section-count">{counts.Menunggu} menunggu</span>
           )}
         </div>
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={handleLoadDemo}
-          disabled={loadingDemo}
-          title="Placeholder: pesanan dari pembeli belum tersambung (belum ada backend)"
-        >
-          {loadingDemo ? "Memuat..." : "+ Muat pesanan contoh"}
-        </button>
       </div>
 
       <div className="chip-row">
@@ -108,8 +85,8 @@ export default function OrdersPage() {
               : `Tidak ada pesanan berstatus ${filter}`}
           </p>
           <p className="empty-state-text">
-            Pesanan dari pembeli akan langsung muncul di sini. Untuk demo,
-            gunakan tombol &ldquo;Muat pesanan contoh&rdquo; di atas.
+            Pesanan dari pembeli akan langsung muncul di sini begitu dibuat
+            di aplikasi pembeli.
           </p>
         </div>
       ) : (
