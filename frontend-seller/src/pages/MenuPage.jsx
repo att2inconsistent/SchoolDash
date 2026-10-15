@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMenu } from "../context/MenuContext";
 import MenuFormModal from "../Component/Menu/MenuFormModal";
-import { CATEGORIES, getCategoryLabel } from "../data/seed";
+import { CATEGORIES, getCategoryLabel } from "../lib/constants";
 import { formatRupiah } from "../lib/format";
 import "./MenuPage.css";
 

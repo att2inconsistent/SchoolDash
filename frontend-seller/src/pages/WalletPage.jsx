@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useWallet } from "../context/WalletContext";
-import { BANKS } from "../data/seed";
+import { BANKS } from "../lib/constants";
 import { formatRupiah, formatDateTime } from "../lib/format";
 import "./WalletPage.css";
 

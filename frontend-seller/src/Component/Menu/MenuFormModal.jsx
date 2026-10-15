@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CATEGORIES } from "../../data/seed";
+import { CATEGORIES } from "../../lib/constants";
 import { formatRupiah } from "../../lib/format";
 import { api } from "../../lib/api";
 

@@ -25,10 +25,11 @@ const icons = {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { myVendor, menuCount, activeMenuCount } = useMenu();
-  const { balance, totalEarned } = useWallet();
-  const { orders, pendingCount, completedCount, revenue } = useOrders();
+  const { loading: loadingMenu, myVendor, menuCount, activeMenuCount } = useMenu();
+  const { loading: loadingWallet, balance, totalEarned } = useWallet();
+  const { loading: loadingOrders, orders, pendingCount, completedCount, revenue } = useOrders();
 
+  const isLoading = loadingMenu || loadingWallet || loadingOrders;
   const recentOrders = orders.slice(0, 4);
 
   return (
@@ -67,7 +68,9 @@ export default function DashboardPage() {
       <div className="stat-grid dash-stats">
         <div className="stat-card">
           <span className="stat-card-label">Saldo tersedia</span>
-          <span className="stat-card-value">{formatRupiah(balance)}</span>
+          <span className={`stat-card-value${isLoading ? " skeleton" : ""}`}>
+            {isLoading ? "Rp—" : formatRupiah(balance)}
+          </span>
           <button
             className="dash-stat-link"
             onClick={() => navigate("/saldo")}
@@ -78,23 +81,31 @@ export default function DashboardPage() {
 
         <div className="stat-card">
           <span className="stat-card-label">Pesanan menunggu</span>
-          <span className="stat-card-value">{pendingCount}</span>
+          <span className={`stat-card-value${isLoading ? " skeleton" : ""}`}>
+            {isLoading ? "—" : pendingCount}
+          </span>
           <span className="stat-card-hint">perlu kamu terima</span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">Pesanan selesai</span>
-          <span className="stat-card-value">{completedCount}</span>
+          <span className={`stat-card-value${isLoading ? " skeleton" : ""}`}>
+            {isLoading ? "—" : completedCount}
+          </span>
           <span className="stat-card-hint">
-            {menuCount} menu ({activeMenuCount} aktif)
+            {isLoading ? "memuat…" : `${menuCount} menu (${activeMenuCount} aktif)`}
           </span>
         </div>
 
         <div className="stat-card">
           <span className="stat-card-label">Total pendapatan</span>
-          <span className="stat-card-value">{formatRupiah(totalEarned)}</span>
+          <span className={`stat-card-value${isLoading ? " skeleton" : ""}`}>
+            {isLoading ? "Rp—" : formatRupiah(totalEarned)}
+          </span>
           <span className="stat-card-hint">
-            {revenue > 0
+            {isLoading
+              ? "memuat…"
+              : revenue > 0
               ? `${formatRupiah(revenue)} dari pesanan selesai`
               : "total dana masuk"}
           </span>
@@ -120,8 +131,7 @@ export default function DashboardPage() {
             <span className="empty-state-icon">{icons.receipt}</span>
             <p className="empty-state-title">Belum ada pesanan masuk</p>
             <p className="empty-state-text">
-              Pesanan dari pembeli akan muncul di sini. Di mode demo, kamu bisa
-              memuat pesanan contoh dari halaman Pesanan.
+              Pesanan dari pembeli akan muncul di sini.
             </p>
             <button
               className="btn btn-primary btn-sm"

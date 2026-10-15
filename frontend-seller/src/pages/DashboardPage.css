@@ -139,3 +139,19 @@
     flex-basis: 100%;
   }
 }
+
+/* --- Skeleton loading state on stat card values --- */
+.stat-card-value.skeleton {
+  color: transparent;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+  border-radius: 4px;
+  user-select: none;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+

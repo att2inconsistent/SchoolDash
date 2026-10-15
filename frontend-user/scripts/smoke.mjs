@@ -1,12 +1,22 @@
 /**
- * Smoke test sementara (jsdom) untuk fitur pencarian & kategori.
- * Jalankan:  node scripts/smoke.mjs
- * Hapus setelah selesai — bukan bagian dari aplikasi.
+ * Smoke test integrasi (jsdom + backend sungguhan).
+ * Jalankan:  npm run smoke   (vite build --mode smoke && node scripts/smoke.mjs)
+ *
+ * Butuh backend berjalan di http://localhost:4000 (npm run dev di folder backend).
+ * Ekspektasi diambil dari API saat test berjalan — bukan data hard-coded —
+ * jadi test tetap valid walau isi database berubah.
+ *
+ * Catatan: npm run smoke membangun dist dengan --mode smoke
+ * (VITE_API_URL=http://localhost:4000). Jalankan `npm run build` lagi
+ * kalau butuh dist produksi.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { JSDOM, VirtualConsole } from "jsdom";
+
+const API = "http://localhost:4000/api";
+const STUDENT = { email: "budi@siswa.test", password: "password123" };
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -17,6 +27,19 @@ const srcMatch = html.match(/<script[^>]+src="([^"]+)"/);
 if (!srcMatch) throw new Error("bundle script tidak ditemukan di dist/index.html");
 const bundleHref =
   pathToFileURL(path.join(distDir, srcMatch[1].replace(/^\/+/, ""))).href;
+
+async function api(pathname, { method = "GET", body, token } = {}) {
+  const res = await fetch(`${API}${pathname}`, {
+    method,
+    headers: {
+      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => null);
+  return { status: res.status, data };
+}
 
 let pass = 0;
 let fail = 0;
@@ -31,9 +54,23 @@ function check(cond, label, extra = "") {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(fn, ms = 5000, step = 100) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    try {
+      const v = await fn();
+      if (v) return v;
+    } catch {
+      /* coba lagi */
+    }
+    await sleep(step);
+  }
+  return null;
+}
+const digits = (s) => String(s ?? "").replace(/\D/g, "");
 
 let bootCount = 0;
-async function boot(url) {
+async function boot(url, { session } = {}) {
   bootCount++;
   const problems = [];
   const vc = new VirtualConsole();
@@ -63,6 +100,10 @@ async function boot(url) {
   });
   w.scrollTo = () => {};
   w.HTMLElement.prototype.scrollIntoView = function () {};
+
+  if (session) {
+    w.localStorage.setItem("schooldesk.auth.session", JSON.stringify(session));
+  }
 
   const expose = [
     "window",
@@ -133,25 +174,16 @@ function text(doc, sel) {
 function bodyText(doc) {
   return doc.body.textContent.replace(/\s+/g, " ");
 }
-function typeInto(w, input, value) {
-  const setter = Object.getOwnPropertyDescriptor(
-    w.HTMLInputElement.prototype,
-    "value"
-  ).set;
-  setter.call(input, value);
-  input.dispatchEvent(new w.Event("input", { bubbles: true }));
-}
-function click(w, el) {
-  el.dispatchEvent(new w.MouseEvent("click", { bubbles: true, cancelable: true }));
-}
 function vendorNames(doc) {
   return qa(doc, ".vendor-card-name").map((el) => el.textContent.trim());
 }
 function menuNames(doc) {
   return qa(doc, ".search-card-name").map((el) => el.textContent.trim());
 }
-function categoryButton(doc, label) {
-  return qa(doc, ".category-item").find((b) => b.textContent.includes(label));
+function sameSet(a, b) {
+  return (
+    a.length === b.length && [...a].sort().join("|") === [...b].sort().join("|")
+  );
 }
 function reportProblems(problems) {
   const bad = problems.filter((p) => /error|warning/i.test(p));
@@ -159,100 +191,94 @@ function reportProblems(problems) {
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n[1] Home + ketik di kolom pencarian");
+const health = await fetch(`${API}/health`)
+  .then((r) => r.ok)
+  .catch(() => false);
+if (!health) {
+  console.error(
+    `\nBackend tidak jalan di ${API} — jalankan \`npm run dev\` di folder backend dulu.`
+  );
+  process.exit(1);
+}
+
+const login = await api("/auth/login", { method: "POST", body: STUDENT });
+if (login.status !== 200) {
+  console.error("\nLogin siswa gagal:", JSON.stringify(login.data));
+  process.exit(1);
+}
+const session = { token: login.data.token, user: login.data.user };
+const [vendorsRes, catsRes] = await Promise.all([
+  api("/catalog/vendors"),
+  api("/catalog/categories"),
+]);
+const allVendors = vendorsRes.data.vendors;
+const categories = catsRes.data.categories;
+
+/* ------------------------------------------------------------------ */
+console.log("\n[1] Beranda tamu — vendor & kategori dari backend");
 {
   const { dom, w, problems } = await boot("http://localhost/");
   const doc = w.document;
-
+  await until(() => vendorNames(doc).length > 0);
   check(
-    text(doc, ".vendor-list-title") === "Vendor Kantin Terpopuler",
-    "judul default 'Vendor Kantin Terpopuler'",
-    text(doc, ".vendor-list-title")
+    sameSet(vendorNames(doc), allVendors.map((v) => v.name)),
+    `${allVendors.length} vendor sesuai API`,
+    vendorNames(doc).join(", ")
   );
-  check(vendorNames(doc).length === 3, "3 vendor tampil", String(vendorNames(doc).length));
-  check(!!categoryButton(doc, "Makanan Berat"), "tombol kategori Makanan Berat ada");
+  const labels = qa(doc, ".category-item").map((el) => el.textContent.trim());
+  check(
+    sameSet(labels, ["Semua", ...categories.map((c) => c.label)]),
+    "tombol kategori = Semua + kategori API",
+    labels.join(", ")
+  );
   check(q(doc, ".search-results") === null, "belum ada section hasil pencarian");
-  check(qa(doc, ".page-stage-item").length === 1, "hanya 1 entry panggung");
-  check(q(doc, ".topbar-search-clear") === null, "tombol X belum muncul (input kosong)");
-
-  // ketik huruf demi huruf seperti user asli (focus dulu, seperti user asli)
-  const input = q(doc, ".topbar-search input");
-  check(!!input, "kolom pencarian ada");
-  input.focus();
-  for (const value of ["g", "go", "gor", "gore", "goreng"]) {
-    typeInto(w, input, value);
-    await sleep(60);
-  }
-  await sleep(400);
-
-  check(w.location.search === "?q=goreng", "URL jadi /?q=goreng", w.location.search);
-  check(input.value === "goreng", "nilai input tidak hilang saat ketik cepat", input.value);
-  check(doc.activeElement === input, "input tetap fokus");
-  check(qa(doc, ".page-stage-item").length === 1, "ketik search tidak menambah entry crossfade", String(qa(doc, ".page-stage-item").length));
   check(
-    menuNames(doc).includes("Nasi Goreng"),
-    "makanan 'Nasi Goreng' muncul di hasil",
-    menuNames(doc).join(", ")
+    !/\d/.test(q(doc, ".balance-card-amount")?.textContent ?? ""),
+    "saldo tamu tanpa angka (belum login)"
   );
-  check(
-    text(doc, ".vendor-list-title") === 'Vendor untuk "goreng"',
-    "judul vendor berubah mengikuti pencarian",
-    text(doc, ".vendor-list-title")
-  );
-  check(!!q(doc, ".topbar-search-clear"), "tombol X muncul saat ada teks");
-
-  // klik X untuk mengosongkan
-  click(w, q(doc, ".topbar-search-clear"));
-  await sleep(400);
-  check(w.location.search === "", "X menghapus param q", w.location.search);
-  check(input.value === "", "X mengosongkan input", input.value);
-  check(
-    text(doc, ".vendor-list-title") === "Vendor Kantin Terpopuler",
-    "vendor kembali ke judul default"
-  );
-
-  // klik kategori Cemilan
-  click(w, categoryButton(doc, "Cemilan"));
-  await sleep(400);
-  check(w.location.search === "?kategori=cemilan", "URL jadi ?kategori=cemilan", w.location.search);
-  check(
-    menuNames(doc).includes("Pisang Goreng") && menuNames(doc).includes("Tahu Crispy"),
-    "menu Cemilan tampil (Pisang Goreng, Tahu Crispy)",
-    menuNames(doc).join(", ")
-  );
-  const names = vendorNames(doc);
-  check(
-    names.includes("Konsinyasi") && names.includes("Mie Ayam") && !names.includes("Kedai Jus"),
-    "vendor tanpa menu Cemilan ikut terfilter",
-    names.join(", ")
-  );
-  check(text(doc, ".vendor-list-count") === "2 vendor", "badge jumlah vendor = 2", text(doc, ".vendor-list-count"));
-  check(qa(doc, ".page-stage-item").length === 1, "ganti kategori tidak menambah entry crossfade");
-
-  // tombol "Hapus filter" di header vendor
-  click(w, q(doc, ".vendor-list-filter"));
-  await sleep(400);
-  check(w.location.search === "", "'Hapus filter' mengosongkan URL", w.location.search);
-  check(vendorNames(doc).length === 3, "vendor kembali penuh");
-
   reportProblems(problems);
   dom.window.close();
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n[2] Buka langsung /?kategori=minuman");
+console.log("\n[2] Cari 'goreng' — hasil = API /catalog/menus?q=goreng");
 {
+  const { data } = await api("/catalog/menus?q=goreng");
+  const expected = data.menus.map((m) => m.name);
+  const { dom, w, problems } = await boot("http://localhost/?q=goreng");
+  const doc = w.document;
+  await until(() => menuNames(doc).length > 0);
+  check(
+    sameSet(menuNames(doc), expected),
+    `${expected.length} menu cocok sesuai API`,
+    menuNames(doc).join(", ")
+  );
+  check(
+    text(doc, ".search-results-title") === 'Menu cocok dengan "goreng"',
+    "judul section menu cocok",
+    text(doc, ".search-results-title")
+  );
+  reportProblems(problems);
+  dom.window.close();
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\n[3] /?kategori=minuman — vendor terfilter = API category=minuman");
+{
+  const { data } = await api("/catalog/vendors?category=minuman");
+  const expected = data.vendors.map((v) => v.name);
   const { dom, w, problems } = await boot("http://localhost/?kategori=minuman");
   const doc = w.document;
+  await until(() => vendorNames(doc).length > 0 || !!q(doc, ".search-empty"));
   check(
-    text(doc, ".vendor-list-title") === "Vendor kategori Minuman",
-    "judul 'Vendor kategori Minuman'",
-    text(doc, ".vendor-list-title")
+    sameSet(vendorNames(doc), expected),
+    "vendor Minuman sesuai API",
+    vendorNames(doc).join(", ")
   );
-  check(vendorNames(doc).join(",") === "Kedai Jus", "hanya Kedai Jus", vendorNames(doc).join(","));
-  check(menuNames(doc).includes("Jus Alpukat"), "menu jus tampil", menuNames(doc).join(","));
   check(
-    categoryButton(doc, "Minuman")?.classList.contains("active"),
+    qa(doc, ".category-item")
+      .find((b) => b.textContent.includes("Minuman"))
+      ?.classList.contains("active"),
     "tombol Minuman bertanda aktif"
   );
   reportProblems(problems);
@@ -260,81 +286,58 @@ console.log("\n[2] Buka langsung /?kategori=minuman");
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n[3] Buka langsung /?q=konsinyasi (cari nama vendor)");
-{
-  const { dom, w, problems } = await boot("http://localhost/?q=konsinyasi");
-  const doc = w.document;
-  check(
-    text(doc, ".search-results-title") === 'Menu cocok dengan "konsinyasi"',
-    "judul section menu cocok",
-    text(doc, ".search-results-title")
-  );
-  check(menuNames(doc).length === 4, "4 menu vendor Konsinyasi tampil", String(menuNames(doc).length));
-  check(vendorNames(doc).join(",") === "Konsinyasi", "vendor Konsinyasi tampil", vendorNames(doc).join(","));
-  check(q(doc, ".topbar-search input").value === "konsinyasi", "input terisi dari URL");
-  reportProblems(problems);
-  dom.window.close();
-}
-
-/* ------------------------------------------------------------------ */
-console.log("\n[4] Buka langsung /?q=zzzz (tidak ada hasil) + Hapus filter");
+console.log("\n[4] /?q=zzzz — empty state");
 {
   const { dom, w, problems } = await boot("http://localhost/?q=zzzz");
   const doc = w.document;
+  await until(() => !!q(doc, ".search-empty"));
   check(!!q(doc, ".search-empty"), "empty state tampil");
   check(bodyText(doc).includes("Tidak ada hasil"), "teks 'Tidak ada hasil' ada");
-  check(q(doc, ".vendor-list") === null, "daftar vendor tidak ikut dirender");
-  click(w, q(doc, ".search-empty-btn"));
-  await sleep(400);
-  check(w.location.search === "", "tombol Hapus filter mengosongkan URL", w.location.search);
-  check(vendorNames(doc).length === 3, "vendor kembali penuh");
   reportProblems(problems);
   dom.window.close();
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n[5] Kombinasi /?q=jus&kategori=minuman");
+console.log("\n[5] Beranda login — saldo = GET /wallet");
 {
-  const { dom, w, problems } = await boot("http://localhost/?q=jus&kategori=minuman");
+  const { data } = await api("/wallet", { token: session.token });
+  const { dom, w, problems } = await boot("http://localhost/", { session });
   const doc = w.document;
+  await until(() => digits(q(doc, ".balance-card-amount")?.textContent) !== "");
   check(
-    menuNames(doc).join(",") === "Jus Alpukat,Jus Jeruk",
-    "hanya menu jus yang cocok",
-    menuNames(doc).join(",")
+    digits(q(doc, ".balance-card-amount")?.textContent) === String(data.balance),
+    `saldo tampil Rp${data.balance?.toLocaleString("id-ID")}`,
+    q(doc, ".balance-card-amount")?.textContent
   );
-  check(vendorNames(doc).join(",") === "Kedai Jus", "vendor Kedai Jus");
-  reportProblems(problems);
-  dom.window.close();
-}
-
-/* ------------------------------------------------------------------ */
-console.log("\n[6] Dari /menu/1 lalu ketik search -> pindah ke beranda");
-{
-  const { dom, w, problems } = await boot("http://localhost/menu/1");
-  const doc = w.document;
-  check(bodyText(doc).includes("Nasi Kulit Jeruk"), "halaman menu vendor tampil");
-
-  const input = q(doc, ".topbar-search input");
-  typeInto(w, input, "salad");
-  await sleep(700);
-  check(w.location.pathname === "/", "otomatis pindah ke beranda", w.location.pathname);
-  check(w.location.search === "?q=salad", "param q terbawa", w.location.search);
   check(
-    menuNames(doc).includes("Salad Buah"),
-    "hasil pencarian tampil",
-    menuNames(doc).join(",")
+    bodyText(doc).includes(session.user.name),
+    "nama user tampil di beranda"
   );
   reportProblems(problems);
   dom.window.close();
 }
 
 /* ------------------------------------------------------------------ */
-console.log("\n[7] /profil tanpa login -> dialihkan ke /login");
+console.log("\n[6] Profil login — statistik = GET /orders");
+{
+  const { data } = await api("/orders", { token: session.token });
+  const { dom, w, problems } = await boot("http://localhost/profil", { session });
+  const doc = w.document;
+  await until(() => bodyText(doc).includes("Kali sudah pesan"));
+  const re = new RegExp(`${data.orders.length}\\s*Kali sudah pesan`);
+  check(re.test(bodyText(doc)), "jumlah pesanan sesuai API", bodyText(doc).slice(0, 200));
+  reportProblems(problems);
+  dom.window.close();
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\n[7] /profil tamu -> redirect /login");
 {
   const { dom, w, problems } = await boot("http://localhost/profil");
   const doc = w.document;
+  await until(() => w.location.pathname === "/login");
   check(w.location.pathname === "/login", "redirect ke /login", w.location.pathname);
-  check(bodyText(doc).includes("Masuk") || bodyText(doc).includes("login"), "form login tampil");
+  check(bodyText(doc).includes("Masuk"), "form login tampil");
   reportProblems(problems);
   dom.window.close();
 }

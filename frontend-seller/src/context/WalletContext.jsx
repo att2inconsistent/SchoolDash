@@ -23,6 +23,7 @@ export function WalletProvider({ children }) {
 
   // { key, balance, earnings, withdrawals } — berlaku selama key cocok
   const [store, setStore] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const refreshWallet = useCallback(async () => {
     if (!user) return null;
@@ -72,9 +73,11 @@ export function WalletProvider({ children }) {
           }
         }
         setStore(next);
+        setLoading(false);
       })
       .catch(() => {
         // biarkan store null (saldo tampil "-") kalau endpoint gagal
+        setLoading(false);
       });
     return () => {
       alive = false;
@@ -102,6 +105,7 @@ export function WalletProvider({ children }) {
     const earnings = wallet?.earnings ?? [];
     const withdrawals = wallet?.withdrawals ?? [];
     return {
+      loading,
       balance: user && wallet ? wallet.balance : null,
       totalEarned: earnings.reduce((sum, e) => sum + e.amount, 0),
       totalWithdrawn: withdrawals.reduce((sum, w) => sum + w.amount, 0),
@@ -113,7 +117,7 @@ export function WalletProvider({ children }) {
     // withdraw dibuat ulang tiap render; daftar dependensi memakai versi dari
     // render terakhir supaya closure-nya selalu segar
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, wallet, refreshWallet]);
+  }, [loading, user, wallet, refreshWallet]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

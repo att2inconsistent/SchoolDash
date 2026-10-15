@@ -34,6 +34,7 @@ export function OrderProvider({ children }) {
   // ganti akun otomatis menampilkan [] tanpa setState di dalam effect
   // (dilarang react-hooks/set-state-in-effect).
   const [store, setStore] = useState({ userKey: null, orders: [] });
+  const [loading, setLoading] = useState(true);
 
   const userKey = user?.email ?? null;
   const rawOrders = useMemo(
@@ -69,9 +70,15 @@ export function OrderProvider({ children }) {
 
     api("/seller/orders")
       .then((res) => {
-        if (alive) setStore({ userKey, orders: res.orders });
+        if (alive) {
+          setStore({ userKey, orders: res.orders });
+          setLoading(false);
+        }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
 
     return () => {
       alive = false;
@@ -110,6 +117,7 @@ export function OrderProvider({ children }) {
   }
 
   const value = {
+    loading,
     orders: myOrders,
     ...stats,
     acceptOrder,

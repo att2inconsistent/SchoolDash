@@ -38,6 +38,7 @@ export function MenuProvider({ children }) {
     vendors: [],
     menus: [],
   });
+  const [loading, setLoading] = useState(true);
 
   const userKey = user?.email ?? null;
   const active = Boolean(userKey && store.userKey === userKey);
@@ -83,11 +84,13 @@ export function MenuProvider({ children }) {
           vendors: [result.vendor],
           menus: list.menus,
         });
+        setLoading(false);
       })
       .catch((err) => {
         // 404 "Kantin tidak ditemukan." = seller belum punya kantin —
         // bukan error fatal, halaman tetap render (myVendor null).
         console.error(err);
+        setLoading(false);
       });
 
     return () => {
@@ -140,6 +143,7 @@ export function MenuProvider({ children }) {
   }
 
   const value = {
+    loading,
     vendors,
     menus,
     myVendor,

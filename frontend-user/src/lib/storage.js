@@ -1,11 +1,7 @@
 /**
  * Utilitas baca/tulis localStorage yang aman.
- * Dipakai oleh AuthContext, WalletContext, CartContext, dan OrderContext
- * supaya data tidak hilang saat user refresh browser atau buka URL langsung.
- *
- * CATATAN: ini masih placeholder untuk demo. Saat backend sudah jadi,
- * ganti dengan panggilan API (fetch/axios) — strukturnya dibuat sama
- * supaya perubahannya tinggal di satu file context.
+ * Dipakai AuthContext, CartContext, dan api.js. Selain session & keranjang,
+ * semua data bisnis tinggal di backend.
  */
 
 export function readJSON(key, fallback = null) {
@@ -41,11 +37,4 @@ export const STORAGE_KEYS = {
 
   // Keranjang siswa masih lokal (keputusan §2: cart global, belum ikut server).
   cart: "schooldesk.cart",
-
-  // Key di bawah ini masih dipakai OrderContext & WalletContext yang belum
-  // ditulis ulang (masih localStorage + setTimeout). Hapus bareng pemindahan
-  // context itu ke API — DB adalah sumber kebenaran sekarang.
-  balances: "schooldesk.wallet.balances",
-  transactions: "schooldesk.wallet.transactions",
-  orders: "schooldesk.orders",
 };
