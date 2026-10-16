@@ -8,6 +8,7 @@ import {
   orderStatusSchema,
 } from './schema.js';
 import {
+  cancelOrder,
   createOrder,
   getOrderById,
   listStudentOrders,
@@ -55,6 +56,19 @@ ordersRouter.get(
   }
 );
 
+// Student cancel — hanya jika status Menunggu
+ordersRouter.post(
+  '/:orderId/cancel',
+  requireAuth,
+  requireRole('student'),
+  validate(orderIdParamsSchema, 'params'),
+  async (req, res) => {
+    const { orderId } = validated<typeof orderIdParamsSchema>(req, 'params');
+    const order = await cancelOrder(orderId, req.user!.sub, 'student');
+    res.json({ order });
+  }
+);
+
 // Dipakai frontend-seller. requireRole('seller') + vendor milik seller itu
 // sendiri mencegah seller A membaca atau mengubah pesanan seller B.
 export const sellerOrdersRouter = Router();
@@ -83,6 +97,20 @@ sellerOrdersRouter.patch(
     const vendor = await getVendorForSeller(req.user!.sub);
 
     const order = await updateOrderStatus(orderId, vendor.id, status);
+    res.json({ order });
+  }
+);
+
+// Seller cancel — any status, but requires sufficient balance for refund
+sellerOrdersRouter.post(
+  '/:orderId/cancel',
+  requireAuth,
+  requireRole('seller'),
+  validate(orderIdParamsSchema, 'params'),
+  async (req, res) => {
+    const { orderId } = validated<typeof orderIdParamsSchema>(req, 'params');
+    const vendor = await getVendorForSeller(req.user!.sub);
+    const order = await cancelOrder(orderId, vendor.id, 'seller');
     res.json({ order });
   }
 );

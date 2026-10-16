@@ -21,6 +21,7 @@ export const orderStatusEnum = pgEnum('order_status', [
   'Menunggu',
   'Sedang Dibuat',
   'Selesai',
+  'Dibatalkan',
 ]);
 
 export const ownerTypeEnum = pgEnum('owner_type', ['student', 'seller']);
@@ -187,6 +188,10 @@ export const transactions = pgTable(
     kind: transactionKindEnum('kind').notNull(),
     status: transactionStatusEnum('status').notNull().default('Menunggu'),
     note: text('note').notNull().default(''),
+    // Gateway payment: 'qris' (instant), 'midtrans_snap', 'midtrans_disbursement', 'manual'
+    gateway: text('gateway'),
+    // External reference (Midtrans order_id/reference_id); prevents duplicate webhook processing
+    gatewayRef: text('gateway_ref'),
     // hanya terisi untuk topup (QRIS berlaku 15 menit)
     qrisPayload: text('qris_payload'),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
@@ -199,6 +204,7 @@ export const transactions = pgTable(
   (t) => [
     index('transactions_wallet_idx').on(t.walletId),
     index('transactions_created_at_idx').on(t.createdAt),
+    uniqueIndex('transactions_gateway_ref_uq').on(t.gatewayRef),
   ]
 );
 

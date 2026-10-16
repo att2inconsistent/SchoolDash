@@ -12,6 +12,7 @@ import { sellerMenusRouter } from './modules/seller-menus/router.js';
 import { ordersRouter, sellerOrdersRouter } from './modules/orders/router.js';
 import { sellerWalletRouter, walletRouter } from './modules/wallet/router.js';
 import { uploadRouter, uploadStaticRouter } from './modules/upload/router.js';
+import webhooksRouter from './modules/webhooks/router.js';
 
 export const app = express();
 
@@ -27,7 +28,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Router dilepas di sini sesuai urutan pengerjaan modul:
-// auth → catalog → orders → wallet → seller menus → upload
+// auth → catalog → orders → wallet → seller menus → upload → webhooks
 app.use('/api/auth', authRouter);
 app.use('/api/seller/auth', sellerAuthRouter);
 app.use('/api/catalog', catalogRouter);
@@ -41,6 +42,8 @@ app.use('/api/seller/upload', uploadRouter);
 // File statis TIDAK butuh auth — URL-nya sudah berupa hash yang tidak bisa
 // ditebak dan img src tidak bisa mengirim header Authorization.
 app.use('/api/uploads', uploadStaticRouter);
+// Webhooks tidak butuh auth — verifikasi via signature
+app.use('/api/webhooks', webhooksRouter);
 
 // Health check harus didaftarkan DI ATAS catch-all 404 di bawah, kalau tidak
 // route ini tidak akan pernah tercapai.

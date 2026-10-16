@@ -239,6 +239,7 @@ export async function updateOrderStatus(
       Menunggu: ['Sedang Dibuat', 'Selesai'],
       'Sedang Dibuat': ['Selesai'],
       Selesai: [],
+      Dibatalkan: [],
     };
 
     if (!allowed[row.status].includes(next)) {
@@ -293,4 +294,91 @@ export async function listVendorOrders(vendorId: number, query: OrderQuery) {
     .limit(query.limit);
 
   return attachItems(rows);
+}
+
+/**
+ * Batalkan pesanan — buyer hanya bisa cancel jika Menunggu, seller bisa any status.
+ * Jika order sudah Selesai, refund = debit seller wallet + kredit buyer wallet (atomic).
+ */
+export async function cancelOrder(
+  orderId: string,
+  actorId: number,
+  role: 'student' | 'seller'
+) {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .for('update')
+      .limit(1);
+
+    if (!row) {
+      fail(404, 'Pesanan tidak ditemukan.');
+    }
+
+    // Verify ownership
+    if (role === 'student' && row.studentId !== actorId) {
+      fail(403, 'Pesanan tidak ditemukan.');
+    }
+    if (role === 'seller' && row.vendorId !== actorId) {
+      fail(403, 'Pesanan tidak ditemukan.');
+    }
+
+    // Already cancelled
+    if (row.status === 'Dibatalkan') {
+      fail(400, 'Pesanan ini sudah dibatalkan.');
+    }
+
+    // Student can only cancel Menunggu
+    if (role === 'student' && row.status !== 'Menunggu') {
+      fail(400, 'Pesanan hanya bisa dibatalkan sebelum diterima penjual.');
+    }
+
+    // If order is Menunggu, just mark cancelled (no refund needed — money not debited yet)
+    // If order is Selesai, refund = debit seller + credit buyer
+    if (row.status === 'Selesai') {
+      // Check seller balance
+      const sellerWallet = await lockWallet(tx, 'seller', row.vendorId);
+      if (sellerWallet.balance < row.total) {
+        fail(400, 'Saldo tidak mencukupi untuk refund.');
+      }
+
+      // Debit seller
+      await adjustBalance(tx, sellerWallet.id, -row.total);
+      await recordTransaction(tx, {
+        walletId: sellerWallet.id,
+        orderId,
+        amount: -row.total,
+        kind: 'earning', // negative earning = refund
+        status: 'Berhasil',
+        note: `Refund pesanan ${orderId}`,
+      });
+
+      // Credit buyer
+      const buyerWallet = await lockWallet(tx, 'student', row.studentId);
+      await adjustBalance(tx, buyerWallet.id, row.total);
+      await recordTransaction(tx, {
+        walletId: buyerWallet.id,
+        orderId,
+        amount: row.total,
+        kind: 'order', // positive order = refund received
+        status: 'Berhasil',
+        note: `Refund pesanan ${orderId}`,
+      });
+    }
+
+    // Mark cancelled
+    const [updated] = await tx
+      .update(orders)
+      .set({ status: 'Dibatalkan' })
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    if (!updated) {
+      fail(404, 'Pesanan tidak ditemukan.');
+    }
+
+    return updated;
+  });
 }
